@@ -56,7 +56,7 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Browser end-to-end (Arabic RTL, phone + desktop)
+      - name: Browser end-to-end (foundation + sales cycle, Arabic RTL, phone + desktop)
         run: |
           pnpm exec playwright install --with-deps chromium
           psql "$MIGRATION_DATABASE_URL" -c "TRUNCATE users, tenants, sessions, password_reset_tokens, audit_logs CASCADE"
@@ -64,6 +64,8 @@ jobs:
           (cd apps/web && pnpm start > /tmp/web-e2e.log 2>&1 &)
           npx wait-on@8.0.4 -t 60000 http://localhost:4000/api/health http://localhost:3000/login
           E2E_MAIL_LOG=/tmp/api-e2e.log pnpm e2e
+          psql "$MIGRATION_DATABASE_URL" -c "TRUNCATE users, tenants, sessions, password_reset_tokens, audit_logs CASCADE"
+          E2E_MAIL_LOG=/tmp/api-e2e.log pnpm e2e:crm
       - name: Upload E2E screenshots and logs
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,7 +1,9 @@
+import { arCrm, enCrm } from './i18n-crm';
+
 export type Locale = 'ar' | 'en';
 export const LOCALE_COOKIE = 'rakan_locale';
 
-const ar = {
+const arBase = {
   'app.name': 'راكان',
   'app.tagline': 'موظف المبيعات الذكي',
   'common.save': 'حفظ',
@@ -60,7 +62,6 @@ const ar = {
   'home.welcome': 'مرحباً {name}',
   'home.roleIn': 'دورك في {company}: {role}',
   'home.sections': 'الأقسام المتاحة لك',
-  'home.phaseNote': 'هذه نسخة الأساس (المرحلة الثانية): الحسابات، الفريق، المناطق، الصلاحيات وسجل التدقيق. العملاء والزيارات ووكلاء الذكاء الاصطناعي تُضاف في المراحل التالية.',
   'home.noTenant': 'لا توجد لديك عضوية نشطة في أي شركة. تواصل مع مدير شركتك لدعوتك.',
   'team.title': 'فريق العمل',
   'team.invite': 'دعوة عضو',
@@ -144,9 +145,10 @@ const ar = {
   'form.vat': 'الرقم الضريبي 15 رقماً يبدأ وينتهي بـ 3.',
 };
 
+const ar = { ...arBase, ...arCrm };
 export type MessageKey = keyof typeof ar;
 
-const en: Record<MessageKey, string> = {
+const enBase: Record<keyof typeof arBase, string> = {
   'app.name': 'Rakan',
   'app.tagline': 'Your AI sales employee',
   'common.save': 'Save',
@@ -205,7 +207,6 @@ const en: Record<MessageKey, string> = {
   'home.welcome': 'Welcome, {name}',
   'home.roleIn': 'Your role at {company}: {role}',
   'home.sections': 'Sections available to you',
-  'home.phaseNote': 'This is the Foundation build (Phase 2): accounts, team, territories, permissions and audit log. Customers, visits and AI agents arrive in the next phases.',
   'home.noTenant': 'You have no active company membership. Ask your company admin to invite you.',
   'team.title': 'Team',
   'team.invite': 'Invite member',
@@ -289,6 +290,8 @@ const en: Record<MessageKey, string> = {
   'form.vat': 'VAT number is 15 digits starting and ending with 3.',
 };
 
+const en: Record<MessageKey, string> = { ...enBase, ...enCrm };
+
 export const messages: Record<Locale, Record<MessageKey, string>> = { ar, en };
 
 export function translate(locale: Locale, key: MessageKey, vars?: Record<string, string | number>): string {
@@ -316,6 +319,37 @@ const AUDIT_ACTIONS: Record<string, { ar: string; en: string }> = {
   'territory.update': { ar: 'تعديل منطقة', en: 'Territory updated' },
   'territory.delete': { ar: 'حذف منطقة', en: 'Territory deleted' },
   'territory.assign': { ar: 'إسناد مندوبين لمنطقة', en: 'Territory reps assigned' },
+  'account.create': { ar: 'إضافة عميل', en: 'Account created' },
+  'account.update': { ar: 'تعديل عميل', en: 'Account updated' },
+  'account.delete': { ar: 'حذف عميل', en: 'Account deleted' },
+  'account.export': { ar: 'تصدير العملاء', en: 'Accounts exported' },
+  'contact.create': { ar: 'إضافة جهة اتصال', en: 'Contact added' },
+  'contact.update': { ar: 'تعديل جهة اتصال', en: 'Contact updated' },
+  'contact.delete': { ar: 'حذف جهة اتصال', en: 'Contact deleted' },
+  'contact.dnc': { ar: 'تغيير "عدم التواصل"', en: 'Do-not-contact changed' },
+  'opportunity.create': { ar: 'فرصة جديدة', en: 'Opportunity created' },
+  'opportunity.update': { ar: 'تعديل فرصة', en: 'Opportunity updated' },
+  'opportunity.stage': { ar: 'تغيير مرحلة فرصة', en: 'Opportunity stage changed' },
+  'opportunity.delete': { ar: 'حذف فرصة', en: 'Opportunity deleted' },
+  'visit.create': { ar: 'جدولة زيارة', en: 'Visit scheduled' },
+  'visit.check_in': { ar: 'بدء زيارة', en: 'Visit started' },
+  'visit.complete': { ar: 'تسجيل نتيجة زيارة', en: 'Visit completed' },
+  'visit.cancel': { ar: 'إلغاء زيارة', en: 'Visit cancelled' },
+  'visit.reschedule': { ar: 'تغيير موعد زيارة', en: 'Visit rescheduled' },
+  'task.create': { ar: 'مهمة جديدة', en: 'Task created' },
+  'task.complete': { ar: 'إنجاز مهمة', en: 'Task completed' },
+  'task.update': { ar: 'تعديل مهمة', en: 'Task updated' },
+  'import.upload': { ar: 'رفع ملف استيراد', en: 'Import uploaded' },
+  'import.map': { ar: 'ربط أعمدة الاستيراد', en: 'Import mapped' },
+  'import.execute': { ar: 'تنفيذ استيراد', en: 'Import executed' },
+  'import.cancel': { ar: 'إلغاء استيراد', en: 'Import cancelled' },
+  'crm.track.create': { ar: 'إنشاء مسار', en: 'Track created' },
+  'crm.track.update': { ar: 'تعديل مسار', en: 'Track updated' },
+  'crm.pipeline.update': { ar: 'تعديل مراحل البيع', en: 'Pipeline updated' },
+  'crm.reason.create': { ar: 'إضافة سبب', en: 'Reason added' },
+  'crm.reason.update': { ar: 'تعديل سبب', en: 'Reason updated' },
+  'crm.custom_field.create': { ar: 'إضافة حقل', en: 'Custom field added' },
+  'crm.custom_field.delete': { ar: 'حذف حقل', en: 'Custom field deleted' },
 };
 
 const AUDIT_FIELDS: Record<string, { ar: string; en: string }> = {

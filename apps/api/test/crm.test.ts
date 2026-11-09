@@ -291,4 +291,21 @@ describe('dashboard', () => {
     expect(d.stageFunnel.find((s: { name: string }) => s.name === stage('new').name).count).toBe(1);
     await rep.get(`/reports/dashboard?from=${inDays(-1)}&to=${inDays(1)}`).expect(403);
   });
+
+  it('funnel combines track pipelines; a visit completed before its scheduled time still counts as completed', async () => {
+    const s = (await owner.post('/crm/tracks', { key: 'shippers', name: 'طالبو النقل' }).expect(201)).body as CrmSettingsDto;
+    const trackId = s.tracks[0]!.id;
+    const a = (await owner.post('/crm/accounts', { name: 'مصنع', trackId, ownerMembershipId: repId }).expect(201)).body;
+    await owner.post('/crm/opportunities', { accountId: a.id, title: 'في مسار', amount: 1000 }).expect(201);
+    const v = (await owner.post('/crm/visits', { accountId: a.id, scheduledStart: inDays(0.05) }).expect(201)).body; // ~1h from now
+    await rep.post(`/crm/visits/${v.id}/complete`, { outcome: 'interested', nextStep: 'none' }).expect(200);
+
+    const all = (await owner.get(`/reports/dashboard?from=${inDays(-1)}&to=${inDays(0.01)}`).expect(200)).body;
+    expect(all.stageFunnel.find((x: { name: string }) => x.name === stage('new').name)).toMatchObject({ count: 1, value: 1000 });
+    expect(all.totals.visitsCompleted).toBe(1);
+    expect(all.totals.visitsScheduled).toBe(0); // it is scheduled after the period end
+    expect(all.byRep.find((r: { membershipId: string }) => r.membershipId === repId).visitsCompleted).toBe(1);
+    const filtered = (await owner.get(`/reports/dashboard?from=${inDays(-1)}&to=${inDays(1)}&trackId=${trackId}`).expect(200)).body;
+    expect(filtered.stageFunnel[0]).toMatchObject({ count: 1 });
+  });
 });

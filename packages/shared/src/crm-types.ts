@@ -63,7 +63,7 @@ export interface VisitDto {
 export interface ImportJobDto {
   id: string; entity: 'account'; filename: string; status: string; headers: string[];
   suggestedMapping: Record<string, string>; mapping: Record<string, string> | null;
-  stats: { rows?: number; valid?: number; invalid?: number; duplicates?: number; created?: number; merged?: number; skipped?: number };
+  stats: { rows?: number; valid?: number; invalid?: number; duplicates?: number; warnings?: number; created?: number; merged?: number; skipped?: number };
   createdAt: string; completedAt: string | null;
 }
 export interface ImportRowDto {

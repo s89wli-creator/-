@@ -2,7 +2,7 @@ import type { Permission, SystemRole } from './permissions';
 
 export interface MeResponse {
   user: { id: string; email: string; fullName: string; locale: 'ar' | 'en'; isPlatformAdmin: boolean };
-  activeTenant: { id: string; name: string; slug: string; role: SystemRole; permissions: Permission[] } | null;
+  activeTenant: { id: string; name: string; slug: string; role: SystemRole; permissions: Permission[]; membershipId: string } | null;
   memberships: { tenantId: string; tenantName: string; role: SystemRole }[];
 }
 

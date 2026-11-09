@@ -40,14 +40,16 @@ export class ReportsService {
           JOIN accounts a ON a.tenant_id = o.tenant_id AND a.id = o.account_id AND a.deleted_at IS NULL
           WHERE h.tenant_id = ${t} AND s.key = ${stageKey} AND h.changed_at >= ${from} AND h.changed_at < ${to} ${trackAcc('a')}`)).n;
 
+      // Scheduled = planned within the period; completed = finished within the period (same definition as the
+      // per-rep table); completion rate = of the visits that were due in the period (start < now), how many were done.
       const visits = await one<{ scheduled: number; completed: number; cancelled: number; due: number; due_completed: number }>(sql`
-        SELECT count(*) FILTER (WHERE v.status <> 'cancelled')::int AS scheduled,
-               count(*) FILTER (WHERE v.status = 'completed')::int AS completed,
-               count(*) FILTER (WHERE v.status = 'cancelled')::int AS cancelled,
-               count(*) FILTER (WHERE v.status <> 'cancelled' AND v.scheduled_start < ${now})::int AS due,
-               count(*) FILTER (WHERE v.status = 'completed' AND v.scheduled_start < ${now})::int AS due_completed
+        SELECT count(*) FILTER (WHERE v.status <> 'cancelled' AND v.scheduled_start >= ${from} AND v.scheduled_start < ${to})::int AS scheduled,
+               count(*) FILTER (WHERE v.status = 'completed' AND v.check_out_at >= ${from} AND v.check_out_at < ${to})::int AS completed,
+               count(*) FILTER (WHERE v.status = 'cancelled' AND v.scheduled_start >= ${from} AND v.scheduled_start < ${to})::int AS cancelled,
+               count(*) FILTER (WHERE v.status <> 'cancelled' AND v.scheduled_start >= ${from} AND v.scheduled_start < LEAST(${to}::timestamptz, ${now}::timestamptz))::int AS due,
+               count(*) FILTER (WHERE v.status = 'completed' AND v.scheduled_start >= ${from} AND v.scheduled_start < LEAST(${to}::timestamptz, ${now}::timestamptz))::int AS due_completed
         FROM visits v JOIN accounts a ON a.tenant_id = v.tenant_id AND a.id = v.account_id AND a.deleted_at IS NULL
-        WHERE v.tenant_id = ${t} AND v.scheduled_start >= ${from} AND v.scheduled_start < ${to} ${trackAcc('a')}`);
+        WHERE v.tenant_id = ${t} ${trackAcc('a')}`);
 
       const opps = await one<{ open: number; pipeline_value: string | null; won: number; lost: number; won_value: string | null }>(sql`
         SELECT count(*) FILTER (WHERE s.category = 'open')::int AS open,
@@ -95,12 +97,24 @@ export class ReportsService {
         WHERE o.tenant_id = ${t} AND o.deleted_at IS NULL AND s.category = 'lost' AND o.closed_at >= ${from} AND o.closed_at < ${to} ${trackAcc('a')}
         GROUP BY 1 ORDER BY 2 DESC`);
 
+      // Funnel: with a track filter, that track's pipeline; otherwise all pipelines combined by stage key
+      // (track pipelines start as copies of the default one), ordered like the default pipeline.
       const pipeline = await this.settings.pipelineFor(tx, t, q.trackId ?? null);
-      const funnelRows = await many<{ stage_id: string; count: number; value: string | null }>(sql`
-        SELECT o.stage_id, count(*)::int AS count, sum(o.amount) AS value
-        FROM opportunities o JOIN accounts a ON a.tenant_id = o.tenant_id AND a.id = o.account_id AND a.deleted_at IS NULL
-        WHERE o.tenant_id = ${t} AND o.deleted_at IS NULL AND o.pipeline_id = ${pipeline.id} ${trackAcc('a')}
-        GROUP BY o.stage_id`);
+      const funnelRows = await many<{ key: string; name: string; position: number; count: number; value: string | null }>(sql`
+        SELECT s.key, min(s.name) AS name, min(s.position)::int AS position, count(*)::int AS count, sum(o.amount) AS value
+        FROM opportunities o
+        JOIN pipeline_stages s ON s.tenant_id = o.tenant_id AND s.id = o.stage_id
+        JOIN accounts a ON a.tenant_id = o.tenant_id AND a.id = o.account_id AND a.deleted_at IS NULL
+        WHERE o.tenant_id = ${t} AND o.deleted_at IS NULL
+          ${q.trackId ? sql`AND o.pipeline_id = ${pipeline.id}` : sql``} ${trackAcc('a')}
+        GROUP BY s.key`);
+      const stageFunnel = pipeline.stages.map((s) => {
+        const f = funnelRows.find((r) => r.key === s.key);
+        return { stageId: s.id, name: s.name, count: f?.count ?? 0, value: Number(f?.value ?? 0) };
+      });
+      for (const r of funnelRows.filter((x) => !pipeline.stages.some((s) => s.key === x.key)).sort((a, b) => a.position - b.position)) {
+        stageFunnel.push({ stageId: r.key, name: r.name, count: r.count, value: Number(r.value ?? 0) });
+      }
 
       const won = opps.won;
       const lost = opps.lost;
@@ -129,10 +143,7 @@ export class ReportsService {
           membershipId: r.membership_id, name: r.name, visitsCompleted: r.visits_completed, tasksDone: r.tasks_done, won: r.won, openValue: Number(r.open_value ?? 0),
         })),
         lossReasons,
-        stageFunnel: pipeline.stages.map((s) => {
-          const f = funnelRows.find((r) => r.stage_id === s.id);
-          return { stageId: s.id, name: s.name, count: f?.count ?? 0, value: Number(f?.value ?? 0) };
-        }),
+        stageFunnel,
       };
     });
   }

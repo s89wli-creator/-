@@ -14,7 +14,8 @@
     "db:setup": "pnpm --filter @rakan/db run setup",
     "db:migrate": "pnpm --filter @rakan/db run migrate",
     "test:isolation:app-layer": "pnpm --filter @rakan/api run test:isolation:app-layer",
-    "e2e": "node e2e/foundation.e2e.cjs"
+    "e2e": "node e2e/foundation.e2e.cjs",
+    "e2e:crm": "node e2e/crm.e2e.cjs"
   },
   "devDependencies": {
     "eslint": "9.39.5",

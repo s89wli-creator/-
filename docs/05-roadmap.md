@@ -10,8 +10,8 @@
 | المرحلة | المدة التقديرية | المخرج الرئيسي | بوابة الانتقال |
 |---|---|---|---|
 | 1. Discovery | ✅ هذه الوثائق | PRD، المعمارية، المخطط، الشاشات، الخطة، التكاليف | **اعتماد صاحب المشروع** |
-| 2. Foundation | 2–3 أسابيع | Monorepo، Auth، Multi-tenancy + RLS، RBAC، الشركات والفريق، Audit، CI | اختبارات العزل والصلاحيات ناجحة 100% |
-| 3. Core CRM | 3–4 أسابيع | العملاء، جهات الاتصال، المسارات، الفرص والمراحل، المهام، الزيارات (ويب)، الاستيراد مع التكرار، Timeline، Dashboard أساسي | استيراد ملف حقيقي من انجزني بنجاح على Staging |
+| 2. Foundation ✅ | 2–3 أسابيع | Monorepo، Auth، Multi-tenancy + RLS، RBAC، الشركات والفريق، Audit، CI | اختبارات العزل والصلاحيات ناجحة 100% |
+| 3. Core CRM ✅ | 3–4 أسابيع | العملاء، جهات الاتصال، المسارات، الفرص والمراحل، المهام، الزيارات (ويب)، الاستيراد مع التكرار، Timeline، Dashboard أساسي | استيراد ملف حقيقي من انجزني بنجاح على Staging |
 | 4. AI Intelligence | 4–5 أسابيع | AI Provider layer، Tool Gateway، الموافقات، Sales Brain، Lead Intelligence، Field Sales Brief، Meeting Intelligence، Follow-up؛ ثم Prospecting و Coach | Evals عربية تتجاوز الحد المحدد؛ اختبارات T2، T3، T6، T9، T10 |
 | 5. Field Experience | 3 أسابيع | PWA، Offline outbox، الصوت + STT، الخرائط، شاشة النتيجة السريعة | تسجيل زيارة ≤ 3 دقائق في اختبار ميداني؛ T5 ناجح |
 | 6. SaaS Operations | 2–3 أسابيع | الباقات، العدادات، الحدود، الدفع، الفوترة الإلكترونية، لوحة Super Admin | T7 ناجح؛ تكلفة AI مرئية |

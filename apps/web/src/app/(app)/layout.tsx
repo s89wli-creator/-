@@ -12,8 +12,14 @@ import { useI18n, useMe } from '@/lib/providers';
 
 const NAV: { href: string; label: MessageKey; permission?: Permission; icon: string }[] = [
   { href: '/home', label: 'nav.home', icon: 'M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z' },
+  { href: '/dashboard', label: 'nav.dashboard', permission: 'reports.read', icon: 'M4 20V10m6 10V4m6 16v-7m4 7H2' },
+  { href: '/accounts', label: 'nav.accounts', permission: 'crm.account.read', icon: 'M3 21V7l9-4 9 4v14M8 21v-6h8v6M8 10h.01M12 10h.01M16 10h.01' },
+  { href: '/pipeline', label: 'nav.pipeline', permission: 'crm.opportunity.read', icon: 'M4 4h4v16H4zM10 4h4v10h-4zM16 4h4v6h-4z' },
+  { href: '/visits', label: 'nav.visits', permission: 'crm.visit.read', icon: 'M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Zm0-8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z' },
+  { href: '/tasks', label: 'nav.tasks', permission: 'crm.task.read', icon: 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9' },
   { href: '/team', label: 'nav.team', permission: 'team.member.read', icon: 'M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0Zm-12 10a8 8 0 0 1 16 0' },
   { href: '/team/territories', label: 'nav.territories', permission: 'team.territory.read', icon: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14' },
+  { href: '/settings/crm', label: 'nav.crmSettings', permission: 'crm.settings.manage', icon: 'M4 6h16M4 12h10M4 18h6m8-3 3 3-3 3' },
   { href: '/settings/company', label: 'nav.company', permission: 'tenant.settings.read', icon: 'M4 21V5l8-3 8 3v16M9 21v-5h6v5M8 9h.01M12 9h.01M16 9h.01' },
   { href: '/settings/audit', label: 'nav.audit', permission: 'audit.read', icon: 'M9 5h10M9 12h10M9 19h10M5 5h.01M5 12h.01M5 19h.01' },
 ];
@@ -57,7 +63,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   if (!me.data) return <LoadingState />;
   const perms = me.data.activeTenant?.permissions ?? [];
   const items = NAV.filter((n) => !n.permission || perms.includes(n.permission));
-  const isActive = (href: string) => pathname === href;
+  const isActive = (href: string) =>
+    pathname === href || (href !== '/home' && href !== '/team' && pathname.startsWith(href + '/'));
 
   const nav = (
     <nav className="space-y-1" aria-label="main">

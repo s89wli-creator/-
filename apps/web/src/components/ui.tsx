@@ -1,5 +1,7 @@
 'use client';
 
+import type React from 'react';
+
 import {
   forwardRef, useEffect, useRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode,
   type SelectHTMLAttributes,
@@ -144,7 +146,7 @@ export function NoPermission() {
 }
 
 /** Accessible modal on top of the native <dialog> element (focus trap + Esc handled by the browser). */
-export function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+export function Modal({ open, onClose, title, children, size = 'md' }: { open: boolean; onClose: () => void; title: string; children: ReactNode; size?: 'md' | 'lg' }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current;
@@ -157,7 +159,7 @@ export function Modal({ open, onClose, title, children }: { open: boolean; onClo
       ref={ref}
       onClose={onClose}
       aria-labelledby="modal-title"
-      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-xl bg-white p-0 text-ink-900 shadow-xl"
+      className={cx('m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-xl bg-white p-0 text-ink-900 shadow-xl', size === 'lg' ? 'max-w-2xl' : 'max-w-lg')}
     >
       <div className="p-6">
         <h2 id="modal-title" className="mb-4 text-lg font-semibold">{title}</h2>
@@ -172,5 +174,82 @@ export function formatDate(iso: string, locale: 'ar' | 'en', withTime = false): 
     dateStyle: 'medium',
     ...(withTime ? { timeStyle: 'short' } : {}),
     timeZone: 'Asia/Riyadh',
+  }).format(new Date(iso));
+}
+
+export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      {...props}
+      className={cx('block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none', className)}
+    />
+  );
+}
+
+export function Tabs<T extends string>({
+  tabs, value, onChange, label,
+}: { tabs: { id: T; label: string; count?: number }[]; value: T; onChange: (v: T) => void; label: string }) {
+  return (
+    <div role="tablist" aria-label={label} className="-mx-1 mb-4 flex gap-1 overflow-x-auto border-b border-ink-200 px-1">
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          role="tab"
+          aria-selected={value === tab.id}
+          onClick={() => onChange(tab.id)}
+          className={cx(
+            'min-h-11 shrink-0 whitespace-nowrap border-b-2 px-3 text-sm',
+            value === tab.id ? 'border-brand-600 font-medium text-brand-700' : 'border-transparent text-ink-500 hover:text-ink-900',
+          )}
+        >
+          {tab.label}
+          {tab.count !== undefined && <span className="ms-1.5 text-xs text-ink-400">{tab.count}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+export function Pagination({ page, total, pageSize, onPage }: { page: number; total: number; pageSize: number; onPage: (p: number) => void }) {
+  const { t } = useI18n();
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  if (pages <= 1) return null;
+  return (
+    <nav className="flex items-center justify-between gap-2 border-t border-ink-100 px-4 py-3 text-sm" aria-label="pagination">
+      <Button variant="secondary" disabled={page <= 1} onClick={() => onPage(page - 1)}>{t('common.previous')}</Button>
+      <span className="text-ink-500">{t('common.pageOf', { page, pages })}</span>
+      <Button variant="secondary" disabled={page >= pages} onClick={() => onPage(page + 1)}>{t('common.next')}</Button>
+    </nav>
+  );
+}
+
+export function formatMoney(value: number | null | undefined, locale: 'ar' | 'en'): string {
+  if (value === null || value === undefined) return '—';
+  const n = new Intl.NumberFormat(locale === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { maximumFractionDigits: 0 }).format(value);
+  return locale === 'ar' ? `${n} ر.س` : `SAR ${n}`;
+}
+
+export function formatPercent(value: number | null | undefined): string {
+  return value === null || value === undefined ? '—' : `${Math.round(value * 100)}%`;
+}
+
+/** <input type="datetime-local"> value in Riyadh time (UTC+3) <-> ISO. */
+export function toLocalInput(iso: string | Date | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(new Date(iso).getTime() + 3 * 3600_000);
+  return d.toISOString().slice(0, 16);
+}
+export function fromLocalInput(v: string): string | null {
+  if (!v) return null;
+  return new Date(`${v}:00+03:00`).toISOString();
+}
+
+export function formatTime(iso: string, locale: 'ar' | 'en'): string {
+  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', { timeStyle: 'short', timeZone: 'Asia/Riyadh' }).format(new Date(iso));
+}
+
+export function formatDay(iso: string, locale: 'ar' | 'en'): string {
+  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA-u-ca-gregory-nu-latn' : 'en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Riyadh',
   }).format(new Date(iso));
 }

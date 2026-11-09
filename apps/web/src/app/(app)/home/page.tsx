@@ -1,20 +1,43 @@
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
+import type { Permission, TaskDto, VisitDto } from '@rakan/shared';
 import Link from 'next/link';
-import { Alert, Card, PageHeader } from '@/components/ui';
+import { Alert, Badge, Card, EmptyState, PageHeader, formatTime } from '@/components/ui';
+import { api } from '@/lib/api';
 import type { MessageKey } from '@/lib/i18n';
-import { useI18n, useMe } from '@/lib/providers';
+import { useCan, useI18n, useMe } from '@/lib/providers';
 
-const SECTIONS: { href: string; label: MessageKey; permission: string }[] = [
+const SECTIONS: { href: string; label: MessageKey; permission: Permission }[] = [
+  { href: '/dashboard', label: 'nav.dashboard', permission: 'reports.read' },
+  { href: '/accounts', label: 'nav.accounts', permission: 'crm.account.read' },
+  { href: '/pipeline', label: 'nav.pipeline', permission: 'crm.opportunity.read' },
+  { href: '/visits', label: 'nav.visits', permission: 'crm.visit.read' },
+  { href: '/tasks', label: 'nav.tasks', permission: 'crm.task.read' },
   { href: '/team', label: 'nav.team', permission: 'team.member.read' },
-  { href: '/team/territories', label: 'nav.territories', permission: 'team.territory.read' },
+  { href: '/settings/crm', label: 'nav.crmSettings', permission: 'crm.settings.manage' },
   { href: '/settings/company', label: 'nav.company', permission: 'tenant.settings.read' },
-  { href: '/settings/audit', label: 'nav.audit', permission: 'audit.read' },
 ];
 
+function dayRange() {
+  const offset = 3 * 3600_000;
+  const local = new Date(Date.now() + offset);
+  const start = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - offset);
+  return { from: start.toISOString(), to: new Date(start.getTime() + 86400_000).toISOString() };
+}
+
 export default function HomePage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const can = useCan();
   const { data: me } = useMe();
+  const { from, to } = dayRange();
+  const membershipId = me?.activeTenant?.membershipId;
+  const visits = useQuery({
+    queryKey: ['visits', 'today', membershipId],
+    queryFn: () => api<VisitDto[]>(`/crm/visits?from=${from}&to=${to}&repMembershipId=${membershipId}`),
+    enabled: can('crm.visit.read') && !!membershipId,
+  });
+  const tasks = useQuery({ queryKey: ['tasks', 'home'], queryFn: () => api<TaskDto[]>('/crm/tasks?view=mine&limit=5'), enabled: can('crm.task.read') });
   if (!me) return null;
   const tenant = me.activeTenant;
   return (
@@ -27,19 +50,56 @@ export default function HomePage() {
         <Alert tone="info">{t('home.noTenant')}</Alert>
       ) : (
         <div className="space-y-6">
+          {can('crm.visit.read') && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Card>
+                <h2 className="border-b border-ink-100 px-5 py-3 font-semibold">{t('home.todayVisits')}</h2>
+                {visits.data?.length ? (
+                  <ul className="divide-y divide-ink-100">
+                    {visits.data.map((v) => (
+                      <li key={v.id}>
+                        <Link href={`/visits/${v.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-ink-50">
+                          <span className="w-14 text-sm font-semibold tabular-nums">{formatTime(v.scheduledStart, locale)}</span>
+                          <span className="min-w-0 flex-1 truncate">{v.accountName}</span>
+                          <Badge tone={v.status === 'completed' ? 'brand' : 'neutral'}>{t(`visits.status.${v.status}` as MessageKey)}</Badge>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <EmptyState>{t('home.noVisitsToday')}</EmptyState>
+                )}
+              </Card>
+              <Card>
+                <h2 className="border-b border-ink-100 px-5 py-3 font-semibold">{t('home.myTasks')}</h2>
+                {tasks.data?.length ? (
+                  <ul className="divide-y divide-ink-100">
+                    {tasks.data.map((x) => (
+                      <li key={x.id} className="flex items-center gap-3 px-5 py-3">
+                        <span className="min-w-0 flex-1 truncate">{x.title}</span>
+                        {x.dueAt && new Date(x.dueAt) < new Date() && <Badge tone="warn">{t('tasks.overdue')}</Badge>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <EmptyState>{t('tasks.empty')}</EmptyState>
+                )}
+                <div className="border-t border-ink-100 px-5 py-3 text-sm"><Link href="/tasks" className="text-brand-700 hover:underline">{t('nav.tasks')} ←</Link></div>
+              </Card>
+            </div>
+          )}
           <div>
             <h2 className="mb-3 text-sm font-medium text-ink-500">{t('home.sections')}</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {SECTIONS.filter((s) => tenant.permissions.includes(s.permission as never)).map((s) => (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {SECTIONS.filter((s) => can(s.permission)).map((s) => (
                 <Link key={s.href} href={s.href}>
-                  <Card className="p-5 transition-colors hover:border-brand-500">
+                  <Card className="p-4 transition-colors hover:border-brand-500">
                     <p className="font-medium">{t(s.label)}</p>
                   </Card>
                 </Link>
               ))}
             </div>
           </div>
-          <Alert tone="info">{t('home.phaseNote')}</Alert>
         </div>
       )}
     </>

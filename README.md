@@ -7,8 +7,9 @@
 ## الحالة
 
 - **المرحلة 1 — Discovery:** ✅ معتمدة.
-- **المرحلة 2 — Foundation:** ✅ مكتملة — انظر [تقرير المرحلة](docs/09-phase-2-report.md).
-- **التالي:** المرحلة 3 — Core CRM.
+- **المرحلة 2 — Foundation:** ✅ مكتملة — [التقرير](docs/09-phase-2-report.md).
+- **المرحلة 3 — Core CRM:** ✅ مكتملة — [التقرير](docs/10-phase-3-report.md).
+- **التالي:** المرحلة 4 — AI Intelligence (Sales Brain والوكلاء والموافقات).
 
 | الوثيقة | المحتوى |
 |---|---|
@@ -22,6 +23,7 @@
 | [07 — خطة Phase 2](docs/07-phase-2-execution-plan.md) | المرحلة الأولى للتنفيذ: Foundation |
 | [08 — نموذج Pilot انجزني](docs/08-enjazni-pilot-intake.md) | المعلومات المطلوبة من انجزني |
 | [09 — تقرير المرحلة الثانية](docs/09-phase-2-report.md) | ما تم بناؤه، الاختبارات، الأمان، القرارات، النواقص |
+| [10 — تقرير المرحلة الثالثة](docs/10-phase-3-report.md) | CRM: العملاء، الاستيراد، الفرص، الزيارات، المهام، لوحة القياس |
 
 ## هيكل المشروع
 
@@ -69,6 +71,12 @@ set -a && . ./.env && set +a && pnpm lint && pnpm typecheck && pnpm test
 
 ```bash
 pnpm test:isolation:app-layer   # عزل الشركات مع تعطيل RLS: طبقة التطبيق وحدها
+```
+
+اختبارات المتصفح (تتطلب تشغيل الـAPI بـ`MAIL_TRANSPORT=log` والواجهة على قاعدة بيانات فارغة):
+
+```bash
+pnpm e2e && pnpm e2e:crm
 ```
 
 ## التقنيات
