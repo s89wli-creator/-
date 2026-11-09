@@ -21,6 +21,20 @@ import { InvitationsController, TeamController } from './team/team.controller';
 import { TeamService } from './team/team.service';
 import { TerritoryService } from './team/territory.service';
 import { TenantController } from './tenancy/tenant.controller';
+import { FieldCryptoService } from './common/field-crypto.service';
+import { AccountsService } from './crm/accounts.service';
+import { ActivityService } from './crm/activity.service';
+import {
+  AccountsController, ContactsNotesController, CrmSettingsController, ImportsController, OpportunitiesController,
+  ReportsController, TasksController, VisitsController,
+} from './crm/crm.controller';
+import { ImportsService } from './crm/imports.service';
+import { OpportunitiesService } from './crm/opportunities.service';
+import { ReportsService } from './crm/reports.service';
+import { ScopeService } from './crm/scope';
+import { CrmSettingsService } from './crm/settings.service';
+import { TasksService } from './crm/tasks.service';
+import { VisitsService } from './crm/visits.service';
 import { TenantService } from './tenancy/tenant.service';
 
 @Global()
@@ -66,10 +80,14 @@ export class AppModule implements NestModule {
       ],
       controllers: [
         HealthController, AuthController, TenantController, TeamController, InvitationsController, AuditController,
+        CrmSettingsController, AccountsController, ContactsNotesController, OpportunitiesController, TasksController,
+        VisitsController, ImportsController, ReportsController,
       ],
       providers: [
         DbService, PasswordService, SessionService, MailService, AuditService,
-        AuthService, TenantService, TeamService, TerritoryService,
+        AuthService, TenantService, TeamService, TerritoryService, FieldCryptoService,
+        ScopeService, ActivityService, CrmSettingsService, AccountsService, OpportunitiesService, TasksService, VisitsService,
+        ImportsService, ReportsService,
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         // Order matters: rate limit -> CSRF -> session -> permission.
         { provide: APP_GUARD, useClass: ThrottlerGuard },

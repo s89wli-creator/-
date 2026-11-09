@@ -1,4 +1,5 @@
 import type { INestApplication } from '@nestjs/common';
+import { permissionsForRole } from '@rakan/shared';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { PASSWORD, addMember, client, outbox, ownerQuery, registerCompany, resetDb, startApp } from './helpers';
 
@@ -30,7 +31,8 @@ describe('invitations', () => {
     await anon.post('/invitations/accept', { token, fullName: 'Rep One', password: PASSWORD }).expect(200);
     const me = (await anon.get('/auth/me').expect(200)).body;
     expect(me.activeTenant.role).toBe('rep');
-    expect(me.activeTenant.permissions).toEqual(['tenant.settings.read']);
+    expect(me.activeTenant.permissions).toEqual([...permissionsForRole('rep')]);
+    expect(me.activeTenant.permissions).not.toContain('team.member.read');
 
     // Single use
     const again = await (await client(app)).post('/invitations/accept', { token, fullName: 'X Y', password: PASSWORD });

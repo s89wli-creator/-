@@ -4,6 +4,7 @@ import { RequestMethod } from '@nestjs/common';
 import { ModulesContainer } from '@nestjs/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { IS_PUBLIC, PERMISSION, TENANT_ISOLATION_EXEMPT } from '../src/common/decorators';
+import { crmProbes, createCrmFixtures, type CrmFixtures } from './crm-probes';
 import { addMember, ownerQuery, registerCompany, resetDb, startApp, type TestClient } from './helpers';
 
 /**
@@ -17,6 +18,7 @@ let b: TestClient;
 let tenantA: string;
 let tenantB: string;
 const B: { memberId: string; territoryId: string; invitationId: string } = { memberId: '', territoryId: '', invitationId: '' };
+let crm: CrmFixtures;
 
 beforeAll(async () => {
   app = await startApp();
@@ -27,11 +29,13 @@ beforeAll(async () => {
   B.memberId = (await addMember(app, b, 'rep@b.sa', 'rep')).membershipId;
   B.territoryId = (await b.post('/team/territories', { name: 'منطقة ب' }).expect(201)).body.id;
   B.invitationId = (await b.post('/team/invitations', { email: 'pending@b.sa', role: 'rep' }).expect(201)).body.id;
+  crm = await createCrmFixtures(a, b);
 });
 afterAll(async () => app.close());
 
 /** Every tenant-scoped route must be listed here with a cross-tenant probe. */
 const PROBES: Record<string, () => Promise<void>> = {
+  ...crmProbes(() => crm),
   'GET /api/tenant': async () => {
     const res = await a.get('/tenant').expect(200);
     expect(res.body.id).toBe(tenantA);

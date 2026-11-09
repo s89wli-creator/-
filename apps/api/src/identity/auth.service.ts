@@ -57,6 +57,7 @@ export class AuthService {
           .returning({ id: tenants.id });
         await setTenantContext(tx, tenant!.id);
         await tx.insert(memberships).values({ tenantId: tenant!.id, userId: user!.id, role: 'owner' });
+        await tx.$client.query('SELECT seed_crm_defaults($1)', [tenant!.id]);
         await this.audit.record(tx, {
           tenantId: tenant!.id,
           actorUserId: user!.id,

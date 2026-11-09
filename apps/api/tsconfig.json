@@ -5,7 +5,7 @@
     "rootDir": ".",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "types": ["node"]
+    "types": ["node", "multer"]
   },
   "include": ["src", "test", "vitest.config.ts"]
 }

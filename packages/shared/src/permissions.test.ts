@@ -18,6 +18,12 @@ describe('permission matrix', () => {
     const writes = ROLE_PERMISSIONS.readonly.filter((p) => /(update|invite|manage)$/.test(p));
     expect(writes).toEqual([]);
   });
+  it('rep cannot import, export, delete, manage CRM settings or read reports', () => {
+    for (const p of ['crm.import', 'crm.export', 'crm.account.delete', 'crm.settings.manage', 'reports.read'] as const) {
+      expect(hasPermission('rep', p), p).toBe(false);
+    }
+    expect(hasPermission('rep', 'crm.visit.write')).toBe(true);
+  });
   it('unknown role has nothing', () => {
     expect(hasPermission('superhacker', 'audit.read')).toBe(false);
   });

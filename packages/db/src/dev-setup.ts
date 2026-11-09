@@ -38,6 +38,7 @@ export async function setupDevDatabase(opts: { adminUrl: string; appUrl: string;
   try {
     await c.query('CREATE EXTENSION IF NOT EXISTS pgcrypto');
     await c.query('CREATE EXTENSION IF NOT EXISTS citext');
+    await c.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
     await c.query(`GRANT ALL ON SCHEMA public TO ${ident(decodeURIComponent(owner.username))}`);
   } finally {
     await c.end();

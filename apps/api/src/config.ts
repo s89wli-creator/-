@@ -17,7 +17,16 @@ const envSchema = z.object({
   RATE_LIMIT_PER_MINUTE: z.coerce.number().int().default(300),
   AUTH_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().default(10),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  /** 32 random bytes, base64. Master key for field encryption (per-tenant keys are derived from it). */
+  DATA_ENCRYPTION_KEY: z
+    .string()
+    .refine((v) => Buffer.from(v, 'base64').length === 32, 'must be 32 bytes, base64-encoded')
+    .optional(),
+  IMPORT_MAX_ROWS: z.coerce.number().int().min(1).max(50_000).default(5000),
 });
+
+/** Development/test-only key so local setups work out of the box. Never accepted in production. */
+export const DEV_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
 
 export type AppConfig = z.infer<typeof envSchema>;
 export const APP_CONFIG = Symbol('APP_CONFIG');
@@ -33,6 +42,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     // The log/memory transports would expose password-reset and invitation links in logs.
     if (!parsed.data.SMTP_URL || (parsed.data.MAIL_TRANSPORT && parsed.data.MAIL_TRANSPORT !== 'smtp')) {
       throw new Error('Production requires SMTP_URL and MAIL_TRANSPORT=smtp');
+    }
+    if (!parsed.data.DATA_ENCRYPTION_KEY || parsed.data.DATA_ENCRYPTION_KEY === DEV_ENCRYPTION_KEY) {
+      throw new Error('Production requires a unique DATA_ENCRYPTION_KEY');
     }
   }
   return parsed.data;

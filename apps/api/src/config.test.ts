@@ -18,6 +18,11 @@ describe('config', () => {
     expect(() =>
       loadConfig({ ...base, NODE_ENV: 'production', COOKIE_SECURE: 'true', SMTP_URL: 'smtp://x', MAIL_TRANSPORT: 'log' }),
     ).toThrow(/SMTP/);
-    expect(loadConfig({ ...base, NODE_ENV: 'production', COOKIE_SECURE: 'true', SMTP_URL: 'smtp://x' }).COOKIE_SECURE).toBe(true);
+    expect(() => loadConfig({ ...base, NODE_ENV: 'production', COOKIE_SECURE: 'true', SMTP_URL: 'smtp://x' })).toThrow(/DATA_ENCRYPTION_KEY/);
+    const key = Buffer.alloc(32, 1).toString('base64');
+    expect(
+      loadConfig({ ...base, NODE_ENV: 'production', COOKIE_SECURE: 'true', SMTP_URL: 'smtp://x', DATA_ENCRYPTION_KEY: key }).COOKIE_SECURE,
+    ).toBe(true);
+    expect(() => loadConfig({ ...base, DATA_ENCRYPTION_KEY: 'short' })).toThrow(/32 bytes/);
   });
 });

@@ -79,6 +79,9 @@ export class TestClient {
   delete(url: string) {
     return this.agent.delete(`/api${url}`).set('x-csrf-token', this.csrf);
   }
+  upload(url: string, content: Buffer, filename: string) {
+    return this.agent.post(`/api${url}`).set('x-csrf-token', this.csrf).attach('file', content, filename);
+  }
 }
 
 export async function client(app: INestApplication): Promise<TestClient> {
