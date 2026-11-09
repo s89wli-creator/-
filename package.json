@@ -1,0 +1,27 @@
+{
+  "name": "rakan",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "eslint .",
+    "test": "turbo run test --concurrency=1",
+    "dev": "turbo run dev --parallel",
+    "db:setup": "pnpm --filter @rakan/db run setup",
+    "db:migrate": "pnpm --filter @rakan/db run migrate",
+    "test:isolation:app-layer": "pnpm --filter @rakan/api run test:isolation:app-layer",
+    "e2e": "node e2e/foundation.e2e.cjs"
+  },
+  "devDependencies": {
+    "eslint": "9.39.5",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "playwright": "1.63.0",
+    "turbo": "2.5.8",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.49.0"
+  }
+}

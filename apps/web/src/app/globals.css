@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+/* Design tokens — RTL-first; use logical utilities only (ms/me/ps/pe/start/end). */
+@theme {
+  --font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui, "Segoe UI", Tahoma, sans-serif;
+  --color-brand-50: #effcf9;
+  --color-brand-100: #c9f4ea;
+  --color-brand-500: #13a58b;
+  --color-brand-600: #0d8571;
+  --color-brand-700: #0e6a5b;
+  --color-ink-50: #f7f7f5;
+  --color-ink-100: #eeeeea;
+  --color-ink-200: #dddcd6;
+  --color-ink-400: #9b9a91;
+  --color-ink-500: #74736b;
+  --color-ink-700: #44433d;
+  --color-ink-900: #1c1c19;
+}
+
+html, body { background: var(--color-ink-50); color: var(--color-ink-900); }
+body { -webkit-font-smoothing: antialiased; }
+:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+dialog::backdrop { background: rgb(28 28 25 / 0.45); }

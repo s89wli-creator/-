@@ -6,7 +6,9 @@
 
 ## الحالة
 
-**المرحلة 1 — Discovery: مكتملة وبانتظار الاعتماد.**
+- **المرحلة 1 — Discovery:** ✅ معتمدة.
+- **المرحلة 2 — Foundation:** ✅ مكتملة — انظر [تقرير المرحلة](docs/09-phase-2-report.md).
+- **التالي:** المرحلة 3 — Core CRM.
 
 | الوثيقة | المحتوى |
 |---|---|
@@ -19,15 +21,54 @@
 | [06 — الخدمات والتكاليف](docs/06-external-services-and-costs.md) | المزودون، التكاليف التقديرية، حدود الباقات المقترحة |
 | [07 — خطة Phase 2](docs/07-phase-2-execution-plan.md) | المرحلة الأولى للتنفيذ: Foundation |
 | [08 — نموذج Pilot انجزني](docs/08-enjazni-pilot-intake.md) | المعلومات المطلوبة من انجزني |
+| [09 — تقرير المرحلة الثانية](docs/09-phase-2-report.md) | ما تم بناؤه، الاختبارات، الأمان، القرارات، النواقص |
 
-## التحقق من المخطط محلياً
+## هيكل المشروع
+
+```
+apps/api        NestJS API (Modular Monolith)
+apps/web        Next.js — واجهة عربية RTL
+packages/db     Migrations (SQL + RLS) + Drizzle schema + سياق المستأجر
+packages/shared الصلاحيات + Zod schemas + أنواع مشتركة بين الخادم والواجهة
+e2e/            اختبار المتصفح الكامل
+db/schema.sql   المخطط المرجعي الكامل (Discovery)
+```
+
+## التشغيل محلياً
+
+المتطلبات: Node 22، pnpm 10، Docker (أو PostgreSQL 16 محلي).
 
 ```bash
-createdb rakan && psql -d rakan -v ON_ERROR_STOP=1 -f db/schema.sql
+docker compose up -d postgres mailpit
 ```
 
 ```bash
-psql -d rakan -f db/tests/tenant_isolation.sql   # يتطلب PostgreSQL 16 + pgvector
+cp .env.example .env
+```
+
+```bash
+pnpm install
+```
+
+```bash
+set -a && . ./.env && set +a && pnpm db:setup
+```
+
+```bash
+pnpm build && pnpm dev
+```
+
+- الواجهة: http://localhost:3000
+- رسائل البريد (الدعوات واستعادة كلمة المرور): http://localhost:8025
+
+## الاختبارات
+
+```bash
+set -a && . ./.env && set +a && pnpm lint && pnpm typecheck && pnpm test
+```
+
+```bash
+pnpm test:isolation:app-layer   # عزل الشركات مع تعطيل RLS: طبقة التطبيق وحدها
 ```
 
 ## التقنيات
