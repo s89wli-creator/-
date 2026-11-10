@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { NEXT_STEPS, VISIT_OUTCOMES, type VisitDto } from '@rakan/shared';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -8,7 +8,9 @@ import { useState, type FormEvent } from 'react';
 import { MeetingInsightsPanel, VisitBriefPanel } from '@/components/ai/panels';
 import { Alert, BackLink, Badge, Button, Card, ErrorState, Field, LoadingState, Textarea, cx, formatDate, formatTime } from '@/components/ui';
 import { useConfirm, useToast } from '@/components/feedback';
-import { api } from '@/lib/api';
+import { api, isQueued, type Queued } from '@/lib/api';
+import { writeCache } from '@/lib/offline';
+import { VoiceNotes } from '@/components/field/VoiceNotes';
 import { isoDaysFromNow } from '@/lib/crm';
 import type { MessageKey } from '@/lib/i18n';
 import { useCan, useI18n, useInvalidate, useMe } from '@/lib/providers';
@@ -64,25 +66,43 @@ export default function VisitPage() {
   const [followUp, setFollowUp] = useState<(typeof FOLLOW_UPS)[number]['key']>('3days');
   const [formError, setFormError] = useState(false);
 
+  const qc = useQueryClient();
   const visit = useQuery({ queryKey: ['visit', id], queryFn: () => api<VisitDto>(`/crm/visits/${id}`) });
   const done = (v: VisitDto) => {
     invalidate('visit');
     invalidate('visits');
     invalidate('tasks');
+    invalidate('field-pack');
     return v;
   };
+  /** Saved offline: show the new state now (it is sent with its original time when the connection returns). */
+  const applyLocally = (patch: Partial<VisitDto>) => {
+    const next = { ...visit.data!, ...patch };
+    qc.setQueryData(['visit', id], next);
+    void writeCache(`/crm/visits/${id}`, next);
+    toast(t('field.savedOffline'), 'info');
+  };
   const checkIn = useMutation({
-    mutationFn: async () => api<VisitDto>(`/crm/visits/${id}/check-in`, { method: 'POST', body: await getPosition() }),
+    mutationFn: async (): Promise<VisitDto | Queued> => {
+      const body = { ...(await getPosition()), occurredAt: new Date().toISOString() };
+      return api<VisitDto>(`/crm/visits/${id}/check-in`, { method: 'POST', body, offline: { label: t('field.label.checkIn', { name: visit.data?.accountName ?? '' }) } });
+    },
     onSuccess: (v) => {
+      if (isQueued(v)) return applyLocally({ status: 'in_progress', checkInAt: new Date().toISOString() });
       toast(t('toast.checkedIn'));
       return done(v);
     },
   });
   const complete = useMutation({
-    mutationFn: (body: object) => api<VisitDto>(`/crm/visits/${id}/complete`, { method: 'POST', body }),
-    onSuccess: (v) => {
-      toast(t('toast.visitSaved'));
+    mutationFn: (body: Record<string, unknown>): Promise<VisitDto | Queued> =>
+      api<VisitDto>(`/crm/visits/${id}/complete`, { method: 'POST', body: { ...body, occurredAt: new Date().toISOString() }, offline: { label: t('field.label.complete', { name: visit.data?.accountName ?? '' }) } }),
+    onSuccess: (v, body) => {
       window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      if (isQueued(v)) {
+        const b = body as Partial<VisitDto>;
+        return applyLocally({ status: 'completed', checkOutAt: new Date().toISOString(), outcome: b.outcome ?? null, interestLevel: b.interestLevel ?? null, nextStep: b.nextStep ?? null, nextFollowUpAt: b.nextFollowUpAt ?? null, notes: b.notes ?? null });
+      }
+      toast(t('toast.visitSaved'));
       return done(v);
     },
   });
@@ -193,6 +213,10 @@ export default function VisitPage() {
           {v.notes && <p className="whitespace-pre-wrap border-t border-line-soft pt-2">{v.notes}</p>}
           {v.followUpTaskId && <Alert tone="success">{t('visits.followUpCreated')}</Alert>}
         </Card>
+      )}
+
+      {me.data?.activeTenant?.features?.recordingEnabled && v.status !== 'cancelled' && (
+        <div className="mt-4"><VoiceNotes visitId={v.id} canWrite={writable} /></div>
       )}
 
       {can('ai.use') && v.status !== 'cancelled' && (

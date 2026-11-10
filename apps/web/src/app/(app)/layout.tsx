@@ -7,7 +7,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Icon, type IconName } from '@/components/icons';
 import { LoadingState, Select, cx } from '@/components/ui';
+import { useConfirm } from '@/components/feedback';
+import { FieldSync } from '@/components/field/FieldSync';
 import { api, ApiError } from '@/lib/api';
+import { pendingRecordings } from '@/lib/field';
+import { outbox, wipeDevice } from '@/lib/offline';
 import type { MessageKey } from '@/lib/i18n';
 import { useI18n, useMe } from '@/lib/providers';
 import type { Theme } from '@/lib/theme';
@@ -17,6 +21,7 @@ const GROUPS: { label?: MessageKey; items: NavItem[] }[] = [
   {
     items: [
       { href: '/home', label: 'nav.home', icon: 'home' },
+      { href: '/field', label: 'nav.field', permission: 'crm.visit.read', icon: 'pin' },
       { href: '/dashboard', label: 'nav.dashboard', permission: 'reports.read', icon: 'chart' },
     ],
   },
@@ -25,7 +30,7 @@ const GROUPS: { label?: MessageKey; items: NavItem[] }[] = [
     items: [
       { href: '/accounts', label: 'nav.accounts', permission: 'crm.account.read', icon: 'building' },
       { href: '/pipeline', label: 'nav.pipeline', permission: 'crm.opportunity.read', icon: 'kanban' },
-      { href: '/visits', label: 'nav.visits', permission: 'crm.visit.read', icon: 'pin' },
+      { href: '/visits', label: 'nav.visits', permission: 'crm.visit.read', icon: 'calendar' },
       { href: '/tasks', label: 'nav.tasks', permission: 'crm.task.read', icon: 'checkSquare' },
     ],
   },
@@ -55,7 +60,7 @@ const GROUPS: { label?: MessageKey; items: NavItem[] }[] = [
   },
 ];
 /** Phone bottom bar: at most 4 destinations + "More" (≤ 5 per the guidelines). */
-const BOTTOM: string[] = ['/home', '/visits', '/tasks', '/accounts'];
+const BOTTOM: string[] = ['/home', '/field', '/tasks', '/accounts'];
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('');
@@ -118,9 +123,20 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     };
   });
 
+  const confirm = useConfirm();
   const logout = useMutation({
-    mutationFn: () => api('/auth/logout', { method: 'POST' }),
-    onSettled: () => {
+    mutationFn: async () => {
+      // Unsent field work would be lost: ask first.
+      const waiting = (await outbox.list()).length + (await pendingRecordings.list()).length;
+      if (waiting && !(await confirm({ title: t('field.logoutPendingTitle'), body: t('field.logoutPending', { n: waiting }), tone: 'danger', confirmLabel: t('auth.logout') }))) {
+        throw new Error('cancelled');
+      }
+      await api('/auth/logout', { method: 'POST' }).catch(() => undefined);
+    },
+    onSuccess: async () => {
+      // Everything stored on this device for the user is wiped on sign-out.
+      await wipeDevice();
+      navigator.serviceWorker?.controller?.postMessage({ type: 'wipe' });
       qc.clear();
       router.replace('/login');
     },
@@ -280,6 +296,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       <main id="main" className="min-w-0 flex-1 px-4 pb-28 pt-6 sm:px-8 lg:pb-12 lg:pt-10">
         <div key={pathname} className="mx-auto max-w-[70rem] animate-page-in">
+          <FieldSync />
           {!me.data.user.emailVerified && pathname !== '/settings/security' && (
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-sm text-fg">
               <span className="flex items-center gap-2"><Icon name="info" size={20} className="shrink-0 text-warn" />{t('security.email.banner')}</span>

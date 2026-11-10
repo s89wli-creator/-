@@ -180,7 +180,7 @@ export class AuthService {
     return this.db.platform(async (tx) => {
       const [user] = await tx.select().from(users).where(eq(users.id, auth.userId)).limit(1);
       const rows = await tx
-        .select({ tenantId: memberships.tenantId, tenantName: tenants.name, slug: tenants.slug, role: memberships.role, membershipId: memberships.id })
+        .select({ tenantId: memberships.tenantId, tenantName: tenants.name, slug: tenants.slug, role: memberships.role, membershipId: memberships.id, settings: tenants.settings })
         .from(memberships)
         .innerJoin(tenants, eq(tenants.id, memberships.tenantId))
         .where(and(eq(memberships.userId, auth.userId), eq(memberships.status, 'active')))
@@ -204,6 +204,7 @@ export class AuthService {
               role: active.role,
               permissions: [...permissionsForRole(active.role)],
               membershipId: active.membershipId,
+              features: { recordingEnabled: !!(active.settings as { recordingEnabled?: boolean } | null)?.recordingEnabled },
             }
           : null,
         memberships: rows.map((r) => ({ tenantId: r.tenantId, tenantName: r.tenantName, role: r.role })),

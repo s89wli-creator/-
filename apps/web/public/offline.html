@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>غير متصل — راكان</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f6f7f5; --fg: #1b1f1d; --muted: #5b625e; --brand: #0f6b57; --card: #fff; --line: #d9ddda; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111312; --fg: #eef0ee; --muted: #a6ada9; --brand: #5cc3a6; --card: #1a1d1b; --line: #2d322f; } }
+  body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: var(--bg); color: var(--fg);
+         font: 16px/1.7 "IBM Plex Sans Arabic", system-ui, sans-serif; padding: 16px; }
+  main { max-width: 26rem; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; text-align: center; }
+  .logo { width: 48px; height: 48px; border-radius: 12px; background: var(--brand); color: #fff; display: grid; place-items: center;
+          font-weight: 700; font-size: 22px; margin: 0 auto 12px; }
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  p { color: var(--muted); margin: 0 0 16px; }
+  a, button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; padding: 0 16px; border-radius: 10px;
+              background: var(--brand); color: #fff; text-decoration: none; border: 0; font: inherit; cursor: pointer; margin: 4px; }
+  a.secondary { background: transparent; color: var(--brand); border: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<main>
+  <div class="logo" aria-hidden="true">ر</div>
+  <h1>لا يوجد اتصال بالإنترنت</h1>
+  <p>هذه الصفحة لم تُحفظ على جهازك بعد. زيارات اليوم ومهامك متاحة دون اتصال، وأي إجراء تسجله يُحفظ ويُرسل تلقائياً عند عودة الاتصال.</p>
+  <a href="/field">زيارات اليوم</a>
+  <button onclick="location.reload()">إعادة المحاولة</button>
+</main>
+</body>
+</html>

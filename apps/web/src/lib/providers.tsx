@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tan
 import type { MeResponse, Permission } from '@rakan/shared';
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { api, ApiError } from './api';
+import { setOfflineUser } from './offline';
 import { LOCALE_COOKIE, errorMessage, translate, type Locale, type MessageKey } from './i18n';
 import { THEME_COOKIE, type Theme } from './theme';
 
@@ -24,8 +25,11 @@ export function Providers({ locale: initial, theme: initialTheme, children }: { 
         defaultOptions: {
           queries: {
             staleTime: 30_000,
-            retry: (count, e) => !(e instanceof ApiError && e.status >= 400 && e.status < 500) && count < 2,
+            // Run queries even when the browser reports offline: the API client then serves the device copy.
+            networkMode: 'always',
+            retry: (count, e) => !(e instanceof ApiError && ((e.status >= 400 && e.status < 500) || e.code === 'NETWORK')) && count < 2,
           },
+          mutations: { networkMode: 'always' },
         },
       }),
   );
@@ -67,7 +71,11 @@ export function useI18n(): I18nValue {
 export function useMe() {
   return useQuery({
     queryKey: ['me'],
-    queryFn: () => api<MeResponse>('/auth/me'),
+    queryFn: async () => {
+      const me = await api<MeResponse>('/auth/me');
+      setOfflineUser(me.user.id);
+      return me;
+    },
     retry: false,
   });
 }

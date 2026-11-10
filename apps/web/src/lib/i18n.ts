@@ -1,4 +1,5 @@
 import { arAi, enAi } from './i18n-ai';
+import { arField, enField } from './i18n-field';
 import { arCrm, enCrm } from './i18n-crm';
 
 export type Locale = 'ar' | 'en';
@@ -146,7 +147,7 @@ const arBase = {
   'form.vat': 'الرقم الضريبي 15 رقماً يبدأ وينتهي بـ 3.',
 };
 
-const ar = { ...arBase, ...arCrm, ...arAi };
+const ar = { ...arBase, ...arCrm, ...arAi, ...arField };
 export type MessageKey = keyof typeof ar;
 
 const enBase: Record<keyof typeof arBase, string> = {
@@ -291,7 +292,7 @@ const enBase: Record<keyof typeof arBase, string> = {
   'form.vat': 'VAT number is 15 digits starting and ending with 3.',
 };
 
-const en: Record<MessageKey, string> = { ...enBase, ...enCrm, ...enAi };
+const en: Record<MessageKey, string> = { ...enBase, ...enCrm, ...enAi, ...enField };
 
 export const messages: Record<Locale, Record<MessageKey, string>> = { ar, en };
 
@@ -318,6 +319,10 @@ const AUDIT_ACTIONS: Record<string, { ar: string; en: string }> = {
   'auth.mfa_recovery_code_used': { ar: 'استخدام رمز استرداد', en: 'Recovery code used' },
   'auth.email_verified': { ar: 'تأكيد البريد', en: 'Email confirmed' },
   'auth.session_revoked': { ar: 'إنهاء جلسة', en: 'Session ended' },
+  'recording.start': { ar: 'بدء تسجيل صوتي (بموافقة العميل)', en: 'Recording started (customer consent)' },
+  'recording.upload': { ar: 'رفع تسجيل صوتي', en: 'Recording uploaded' },
+  'recording.transcript': { ar: 'نص تسجيل', en: 'Recording transcript' },
+  'recording.delete': { ar: 'حذف تسجيل', en: 'Recording deleted' },
   'invitation.create': { ar: 'إرسال دعوة', en: 'Invitation sent' },
   'invitation.revoke': { ar: 'إلغاء دعوة', en: 'Invitation revoked' },
   'invitation.accept': { ar: 'قبول دعوة', en: 'Invitation accepted' },

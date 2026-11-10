@@ -17,7 +17,8 @@
     "e2e": "node e2e/foundation.e2e.cjs",
     "e2e:crm": "node e2e/crm.e2e.cjs",
     "e2e:ux": "node e2e/ux.e2e.cjs",
-    "e2e:ai": "node e2e/ai.e2e.cjs"
+    "e2e:ai": "node e2e/ai.e2e.cjs",
+    "e2e:field": "node e2e/field.e2e.cjs"
   },
   "devDependencies": {
     "eslint": "9.39.5",

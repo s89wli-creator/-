@@ -32,7 +32,7 @@ export default function CompanySettingsPage() {
   if (tenant.error) return <ErrorState error={tenant.error} onRetry={() => tenant.refetch()} />;
   const d = tenant.data!;
   const editable = can('tenant.settings.update');
-  const s = d.settings as { repVisibility?: string; recordingEnabled?: boolean };
+  const s = d.settings as { repVisibility?: string; recordingEnabled?: boolean; recordingRetentionDays?: number };
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -49,7 +49,10 @@ export default function CompanySettingsPage() {
       industry: opt('industry'),
       timezone: String(fd.get('timezone')),
       defaultLocale: String(fd.get('defaultLocale')),
-      settings: { repVisibility: String(fd.get('repVisibility')), recordingEnabled: fd.get('recordingEnabled') === 'on' },
+      settings: {
+        repVisibility: String(fd.get('repVisibility')), recordingEnabled: fd.get('recordingEnabled') === 'on',
+        recordingRetentionDays: Number(fd.get('recordingRetentionDays') || 90),
+      },
     };
     const v = validate(tenantSettingsSchema, input);
     setErrors(v.ok ? {} : v.errors);
@@ -102,6 +105,10 @@ export default function CompanySettingsPage() {
               <input type="checkbox" name="recordingEnabled" defaultChecked={!!s.recordingEnabled} className="size-5 accent-brand-600" />
               {t('company.recording')}
             </label>
+            <p className="-mt-3 text-sm text-fg-muted sm:col-span-2">{t('company.recordingHint')}</p>
+            <Field label={t('company.recordingRetention')} htmlFor="recordingRetentionDays" error={fe('settings.recordingRetentionDays')}>
+              <Input id="recordingRetentionDays" name="recordingRetentionDays" type="number" min={7} max={365} dir="ltr" defaultValue={s.recordingRetentionDays ?? 90} />
+            </Field>
           </fieldset>
           {editable && (
             <div className="flex justify-end">

@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   title: { default: 'راكان — Rakan', template: '%s · راكان' },
   description: 'موظف المبيعات الذكي للشركات',
   robots: { index: false, follow: false },
+  manifest: '/manifest.webmanifest',
+  applicationName: 'راكان',
+  appleWebApp: { capable: true, title: 'راكان', statusBarStyle: 'default' },
+  icons: { icon: '/icons/icon-192.png', apple: '/icons/apple-touch-icon.png' },
 };
 
 export const viewport: Viewport = {

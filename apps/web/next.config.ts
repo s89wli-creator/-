@@ -18,7 +18,11 @@ const config: NextConfig = {
     return [{ source: '/api/:path*', destination: `${API_URL}/api/:path*` }];
   },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // The service worker must always be revalidated so fixes reach installed apps.
+      { source: '/sw.js', headers: [{ key: 'Cache-Control', value: 'no-cache' }] },
+    ];
   },
 };
 
