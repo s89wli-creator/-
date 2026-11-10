@@ -56,6 +56,8 @@ const assert = (c, m) => { if (!c) throw new Error(m); };
   await page.getByRole('button', { name: 'حذف' }).click();
   const confirmDialog = page.getByRole('dialog', { name: 'هل أنت متأكد؟' });
   await confirmDialog.waitFor();
+  // Dialog content mounts one render after showModal(); autoFocus then moves focus to Cancel.
+  await page.waitForFunction(() => document.activeElement?.textContent?.trim() === 'إلغاء', null, { timeout: 3000 }).catch(() => undefined);
   const focusedLabel = await page.evaluate(() => document.activeElement?.textContent?.trim());
   assert(focusedLabel === 'إلغاء', `destructive dialog should focus Cancel, got "${focusedLabel}"`);
   await page.screenshot({ path: `${OUT}/ux-02-confirm-dialog.png` });
