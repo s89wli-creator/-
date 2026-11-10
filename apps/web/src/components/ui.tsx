@@ -486,3 +486,25 @@ export function formatDay(iso: string, locale: 'ar' | 'en'): string {
     weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Riyadh',
   }).format(new Date(iso));
 }
+
+// ---------------------------------------------------------------- usage meter
+
+/** Used vs limit with an 80% (warn) and 100% (full) state. `limit === null` = unlimited. */
+export function Meter({ label, used, limit, format = String, unlimitedLabel }: { label: string; used: number; limit: number | null; format?: (n: number) => string; unlimitedLabel: string }) {
+  const ratio = limit === null ? 0 : limit === 0 ? 1 : Math.min(1, used / limit);
+  const tone = limit !== null && ratio >= 1 ? 'bg-danger' : limit !== null && ratio >= 0.8 ? 'bg-accent' : 'bg-brand-600';
+  return (
+    <div>
+      <div className="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
+        <span className="font-medium">{label}</span>
+        <span className="tabular-nums text-fg-muted" dir="ltr">{format(used)} / {limit === null ? unlimitedLabel : format(limit)}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-subtle-strong" role="progressbar" aria-label={label} aria-valuenow={Math.round(ratio * 100)} aria-valuemin={0} aria-valuemax={100}>
+        <div className={cx('h-full origin-right rounded-full transition-transform duration-300 ltr:origin-left', tone)} style={{ transform: `scaleX(${limit === null ? 0.04 : ratio})` }} />
+      </div>
+    </div>
+  );
+}
+
+export const formatBytes = (b: number) => (b >= 1024 ** 3 ? `${(b / 1024 ** 3).toFixed(1)} GB` : b >= 1024 ** 2 ? `${(b / 1024 ** 2).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);
+export const formatUsd = (n: number) => `$${n.toFixed(n < 10 ? 2 : 0)}`;

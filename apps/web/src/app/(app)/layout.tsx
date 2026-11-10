@@ -55,6 +55,7 @@ const GROUPS: { label?: MessageKey; items: NavItem[] }[] = [
     items: [
       { href: '/settings/crm', label: 'nav.crmSettings', permission: 'crm.settings.manage', icon: 'sliders' },
       { href: '/settings/company', label: 'nav.company', permission: 'tenant.settings.read', icon: 'settings' },
+      { href: '/settings/billing', label: 'nav.billing', permission: 'tenant.settings.read', icon: 'chart' },
       { href: '/settings/audit', label: 'nav.audit', permission: 'audit.read', icon: 'list' },
       { href: '/settings/security', label: 'nav.security', icon: 'lock' },
     ],
@@ -218,6 +219,11 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <p className="truncate text-xs text-fg-muted"><bdi>{me.data.user.email}</bdi></p>
         </div>
       </div>
+      {me.data.user.isPlatformAdmin && (
+        <Link href="/platform" className="flex min-h-10 items-center gap-2 rounded-lg bg-subtle-strong px-3 text-sm font-medium text-fg transition-colors hover:bg-subtle">
+          <Icon name="settings" size={16} /> {t('platform.open')}
+        </Link>
+      )}
       <ThemeSwitch />
       <div className="grid grid-cols-2 gap-1">
         <button className="flex min-h-10 items-center justify-center gap-2 rounded-lg text-sm text-fg-sub transition-colors hover:bg-subtle-strong" onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}>
@@ -295,6 +301,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       <main id="main" className="min-w-0 flex-1 px-4 pb-28 pt-6 sm:px-8 lg:pb-12 lg:pt-10">
         <div key={pathname} className="mx-auto max-w-[70rem] animate-page-in">
+          {(me.data.activeTenant?.status === 'suspended' || me.data.activeTenant?.status === 'cancelled') && (
+            <div className="mb-5 rounded-xl border border-danger-line bg-danger-soft p-5" role="alert">
+              <p className="flex items-center gap-2 font-semibold text-danger"><Icon name="lock" size={20} /> {t('billing.suspendedTitle')}</p>
+              <p className="mt-1 text-sm text-fg-sub">{t('billing.suspendedBody')}</p>
+            </div>
+          )}
           <FieldSync />
           {!me.data.user.emailVerified && pathname !== '/settings/security' && (
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-sm text-fg">
