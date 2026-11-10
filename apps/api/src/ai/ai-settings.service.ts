@@ -41,7 +41,7 @@ export class AiSettingsService {
       const s = await this.runtime.settings(tx, auth.tenantId);
       const spend = await this.runtime.monthSpend(tx, auth.tenantId);
       return {
-        monthUsd: Math.round(spend.usd * 10000) / 10000, budgetUsd: s.monthlyBudgetUsd, runsThisMonth: spend.runs,
+        monthUsd: Math.round(spend.usd * 10000) / 10000, budgetUsd: await this.runtime.effectiveBudget(auth.tenantId, s.monthlyBudgetUsd), runsThisMonth: spend.runs,
         enabled: s.enabled, providerReady: this.runtime.providerReady,
       };
     });

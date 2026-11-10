@@ -7,6 +7,7 @@ export const IS_PUBLIC = 'rakan:isPublic';
 export const PERMISSION = 'rakan:permission';
 export const TENANT_ISOLATION_EXEMPT = 'rakan:tenantIsolationExempt';
 export const AUTH_RATE_LIMITED = 'rakan:authRateLimited';
+export const PLATFORM_ADMIN = 'rakan:platformAdmin';
 
 /** Applies the strict `auth` throttler (AUTH_RATE_LIMIT_PER_MINUTE per IP) to credential endpoints. */
 export const AuthRateLimited = () => SetMetadata(AUTH_RATE_LIMITED, true);
@@ -15,6 +16,9 @@ export const AuthRateLimited = () => SetMetadata(AUTH_RATE_LIMITED, true);
 export const Public = () => SetMetadata(IS_PUBLIC, true);
 
 /** Route requires an active tenant membership with this permission. */
+/** Platform console routes (cross-company aggregates). Requires a platform operator; see PermissionsGuard. */
+export const PlatformAdminOnly = () => SetMetadata(PLATFORM_ADMIN, true);
+
 export const RequirePermission = (permission: Permission) => SetMetadata(PERMISSION, permission);
 
 /**

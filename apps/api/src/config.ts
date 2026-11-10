@@ -30,6 +30,8 @@ const envSchema = z.object({
   AI_MODEL: z.string().default('claude-opus-5-5'),
   /** Encrypted file storage (visit recordings). Local disk for now; an in-Kingdom object store adapter later. */
   STORAGE_DIR: z.string().default('./var/storage'),
+  /** Platform console requires two-step verification (always on in production). */
+  PLATFORM_ADMIN_REQUIRE_MFA: z.enum(['true', 'false']).optional().transform((v) => v === 'true'),
 });
 
 /** Development/test-only key so local setups work out of the box. Never accepted in production. */
@@ -53,6 +55,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (!parsed.data.DATA_ENCRYPTION_KEY || parsed.data.DATA_ENCRYPTION_KEY === DEV_ENCRYPTION_KEY) {
       throw new Error('Production requires a unique DATA_ENCRYPTION_KEY');
     }
+    parsed.data.PLATFORM_ADMIN_REQUIRE_MFA = true;
     if (parsed.data.AI_PROVIDER === 'fake') throw new Error('AI_PROVIDER=fake is for tests only');
   }
   return parsed.data;

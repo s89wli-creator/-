@@ -3,7 +3,7 @@ import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { RequestMethod } from '@nestjs/common';
 import { ModulesContainer } from '@nestjs/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { IS_PUBLIC, PERMISSION, TENANT_ISOLATION_EXEMPT } from '../src/common/decorators';
+import { IS_PUBLIC, PERMISSION, PLATFORM_ADMIN, TENANT_ISOLATION_EXEMPT } from '../src/common/decorators';
 import { aiProbes, createAiFixtures, type AiFixtures } from './ai-probes';
 import { crmProbes, createCrmFixtures, type CrmFixtures } from './crm-probes';
 import { createFieldFixtures, fieldProbes, sharedIdempotencyKeyProbe, type FieldFixtures } from './field-probes';
@@ -39,11 +39,32 @@ beforeAll(async () => {
 });
 afterAll(async () => app.close());
 
+/** Platform console: company owners (even of the same database) must get 403 on every route. */
+const PLATFORM_PROBES: Record<string, () => Promise<void>> = Object.fromEntries(
+  [
+    ['GET', '/platform/overview'], ['GET', '/platform/tenants'], ['GET', '/platform/tenants/:id'], ['PATCH', '/platform/tenants/:id/subscription'],
+    ['GET', '/platform/plans'], ['POST', '/platform/plans'], ['PATCH', '/platform/plans/:id'], ['GET', '/platform/audit'],
+  ].map(([method, path]) => [
+    `${method} /api${path}`,
+    async () => {
+      const url = path!.replace(':id', tenantB);
+      const res = method === 'GET' ? await a.get(url) : method === 'POST' ? await a.post(url, {}) : await a.patch(url, { status: 'suspended', reason: 'attack' });
+      expect(res.status).toBe(403);
+      const [t] = await ownerQuery<{ status: string }>('SELECT status FROM tenants WHERE id = $1', [tenantB]);
+      expect(t!.status).not.toBe('suspended');
+    },
+  ]),
+);
+
 /** Every tenant-scoped route must be listed here with a cross-tenant probe. */
 const PROBES: Record<string, () => Promise<void>> = {
   ...crmProbes(() => crm),
   ...aiProbes(() => app, () => ai),
   ...fieldProbes(() => crm, () => field),
+  'GET /api/tenant/plan': async () => {
+    const res = (await a.get('/tenant/plan').expect(200)).body;
+    expect(res.usage.accounts).toBe((await ownerQuery<{ n: number }>('SELECT count(*)::int AS n FROM accounts WHERE tenant_id = $1 AND deleted_at IS NULL', [tenantA]))[0]!.n);
+  },
   'GET /api/tenant': async () => {
     const res = await a.get('/tenant').expect(200);
     expect(res.body.id).toBe(tenantA);
@@ -138,7 +159,7 @@ describe('tenant isolation (company A vs company B)', () => {
   });
 
   it('every route is public, permission-guarded, or explicitly exempt — and every guarded route has a probe', () => {
-    const routes: { key: string; kind: 'public' | 'guarded' | 'exempt' | 'UNCLASSIFIED' }[] = [];
+    const routes: { key: string; kind: 'public' | 'guarded' | 'exempt' | 'platform' | 'UNCLASSIFIED' }[] = [];
     for (const mod of app.get(ModulesContainer).values()) {
       for (const wrapper of mod.controllers.values()) {
         const cls = wrapper.metatype as new (...args: unknown[]) => unknown;
@@ -153,7 +174,7 @@ describe('tenant isolation (company A vs company B)', () => {
           const sub = String(path).replace(/^\/|\/$/g, '');
           const key = `${RequestMethod[method]} /api/${[base, sub].filter(Boolean).join('/')}`;
           const meta = (k: string) => Reflect.getMetadata(k, handler) ?? Reflect.getMetadata(k, cls);
-          const kind = meta(PERMISSION) ? 'guarded' : meta(IS_PUBLIC) ? 'public' : meta(TENANT_ISOLATION_EXEMPT) ? 'exempt' : 'UNCLASSIFIED';
+          const kind = meta(PLATFORM_ADMIN) ? 'platform' : meta(PERMISSION) ? 'guarded' : meta(IS_PUBLIC) ? 'public' : meta(TENANT_ISOLATION_EXEMPT) ? 'exempt' : 'UNCLASSIFIED';
           routes.push({ key, kind });
         }
       }
@@ -162,5 +183,12 @@ describe('tenant isolation (company A vs company B)', () => {
     expect(routes.filter((r) => r.kind === 'UNCLASSIFIED').map((r) => r.key)).toEqual([]);
     const guarded = routes.filter((r) => r.kind === 'guarded').map((r) => r.key).sort();
     expect(guarded).toEqual(Object.keys(PROBES).sort());
+    // Platform console routes: each one is probed with a regular company owner (must be refused).
+    const platform = routes.filter((r) => r.kind === 'platform').map((r) => r.key).sort();
+    expect(platform).toEqual(Object.keys(PLATFORM_PROBES).sort());
   });
+
+  for (const [route, probe] of Object.entries(PLATFORM_PROBES)) {
+    it(`${route} refuses company users`, probe);
+  }
 });

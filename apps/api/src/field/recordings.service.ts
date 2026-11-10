@@ -9,6 +9,7 @@ import { AuditService } from '../audit/audit.service';
 import { ScopeService } from '../crm/scope';
 import { VisitsService } from '../crm/visits.service';
 import { StorageService } from './storage.service';
+import { PlanService } from '../platform/plan.service';
 
 type Row = typeof visitRecordings.$inferSelect;
 const DEFAULT_RETENTION_DAYS = 90;
@@ -42,6 +43,7 @@ export class RecordingsService {
     private readonly scopes: ScopeService,
     private readonly visits: VisitsService,
     private readonly audit: AuditService,
+    private readonly plans: PlanService,
   ) {}
 
   private chunkKey = (r: Row, n: number) => `${r.tenantId}/recordings/${r.id}/chunk-${String(n).padStart(3, '0')}`;
@@ -98,6 +100,7 @@ export class RecordingsService {
       const [t] = await tx.select({ settings: tenants.settings }).from(tenants).where(eq(tenants.id, auth.tenantId));
       const settings = (t?.settings ?? {}) as { recordingEnabled?: boolean; recordingRetentionDays?: number };
       if (!settings.recordingEnabled) throw forbidden('Recording is turned off for this company');
+      await this.plans.assertStorage(auth.tenantId, 0);
       const v = await this.visits.load(tx, auth, await this.scopes.forRequest(tx, auth), visitId, true);
       if (v.status === 'cancelled') throw new AppError(409, 'INVALID_STATE', 'The visit was cancelled');
       const days = settings.recordingRetentionDays ?? DEFAULT_RETENTION_DAYS;
@@ -148,6 +151,7 @@ export class RecordingsService {
       parts.push(b);
     }
     const audio = Buffer.concat(parts);
+    await this.plans.assertStorage(auth.tenantId, audio.length);
     await this.storage.put(auth.tenantId, this.fileKey(r), audio);
     await this.storage.remove(auth.tenantId, `${r.tenantId}/recordings/${r.id}`);
     return this.db.tenant(auth, async (tx) => {

@@ -10,6 +10,12 @@ export interface AuthContext {
   membershipId: string | null;
   role: SystemRole | null;
   permissions: readonly Permission[];
+  /** Platform operator (Rakan staff). Grants the platform console only, never tenant data. */
+  isPlatformAdmin?: boolean;
+  /** Two-step verification is on for the user and was completed for this session. */
+  mfaSession?: boolean;
+  /** Status of the active company (trial | active | suspended | cancelled). */
+  tenantStatus?: string | null;
 }
 
 /** AuthContext guaranteed to have an active tenant (set by PermissionsGuard). */

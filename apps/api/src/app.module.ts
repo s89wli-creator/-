@@ -51,6 +51,9 @@ import { ToolGatewayService } from './ai/tool-gateway.service';
 import { FieldController, RecordingsController } from './field/field.controller';
 import { RecordingsService } from './field/recordings.service';
 import { StorageService } from './field/storage.service';
+import { PlanService } from './platform/plan.service';
+import { PlatformController, TenantPlanController } from './platform/platform.controller';
+import { PlatformService } from './platform/platform.service';
 
 function llmProvider(config: AppConfig): LlmProvider {
   const kind = config.AI_PROVIDER ?? (config.ANTHROPIC_API_KEY ? 'anthropic' : 'none');
@@ -103,7 +106,7 @@ export class AppModule implements NestModule {
         HealthController, AuthController, TenantController, TeamController, InvitationsController, AuditController,
         CrmSettingsController, AccountsController, ContactsNotesController, OpportunitiesController, TasksController,
         VisitsController, ImportsController, ReportsController, AiController, BrainController, ApprovalsController,
-        FieldController, RecordingsController,
+        FieldController, RecordingsController, PlatformController, TenantPlanController,
       ],
       providers: [
         DbService, PasswordService, SessionService, MailService, AuditService, SecurityService,
@@ -112,7 +115,7 @@ export class AppModule implements NestModule {
         ImportsService, ReportsService,
         { provide: LLM_PROVIDER, useValue: llmProvider(config) },
         AiRuntimeService, ToolGatewayService, AiSettingsService, BrainService, AgentsService, MessagingService,
-        StorageService, RecordingsService,
+        StorageService, RecordingsService, PlanService, PlatformService,
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
         // Order matters: rate limit -> CSRF -> session -> permission.

@@ -33,7 +33,15 @@ export async function startApp(overrides: Record<string, string> = {}): Promise<
 export async function resetDb(): Promise<void> {
   const c = new Client({ connectionString: process.env.MIGRATION_DATABASE_URL });
   await c.connect();
-  await c.query('TRUNCATE users, tenants, sessions, password_reset_tokens, audit_logs RESTART IDENTITY CASCADE');
+  await c.query('TRUNCATE users, tenants, sessions, password_reset_tokens, audit_logs, platform_audit RESTART IDENTITY CASCADE');
+  // Plans are platform data that tests may edit: restore the starting plans.
+  await c.query(`DELETE FROM plans WHERE key NOT IN ('solo','team','business','enterprise')`);
+  await c.query(`UPDATE plans SET is_active = true, limits = CASE key
+    WHEN 'solo' THEN '{"users":1,"aiMonthlyUsd":10,"storageMb":2048,"recordingMinutes":120}'::jsonb
+    WHEN 'team' THEN '{"users":5,"aiMonthlyUsd":40,"storageMb":10240,"recordingMinutes":600}'::jsonb
+    WHEN 'business' THEN '{"users":15,"aiMonthlyUsd":120,"storageMb":51200,"recordingMinutes":2000}'::jsonb
+    ELSE '{"users":null,"aiMonthlyUsd":null,"storageMb":null,"recordingMinutes":null}'::jsonb END,
+    price_sar_monthly = CASE key WHEN 'solo' THEN 399 WHEN 'team' THEN 899 WHEN 'business' THEN 1799 ELSE NULL END`);
   await c.end();
 }
 

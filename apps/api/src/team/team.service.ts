@@ -9,6 +9,7 @@ import type { AuthContext, RequestMeta, TenantAuthContext } from '../common/auth
 import { generateToken, hashToken } from '../common/crypto';
 import { DbService, pgErrorCode } from '../common/db.service';
 import { AppError, conflict, forbidden, notFound } from '../common/errors';
+import { PlanService } from '../platform/plan.service';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from '../identity/mail.service';
 import { PasswordService } from '../identity/password.service';
@@ -46,6 +47,7 @@ export class TeamService {
     private readonly mail: MailService,
     private readonly passwords: PasswordService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
+    private readonly plans: PlanService,
   ) {}
 
   // ---------------- members ----------------
@@ -165,6 +167,7 @@ export class TeamService {
 
   async invite(auth: TenantAuthContext, input: InviteInput, meta: RequestMeta): Promise<InvitationDto> {
     if (!canAssignRole(auth.role, input.role)) throw forbidden('You cannot invite a member with this role');
+    await this.plans.assertCanAddUser(auth.tenantId);
     const token = generateToken();
     const { dto, tenantName } = await this.db.tenant(auth, async (tx) => {
       const existing = await tx

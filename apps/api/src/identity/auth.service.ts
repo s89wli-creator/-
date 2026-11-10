@@ -12,6 +12,7 @@ import { AuditService } from '../audit/audit.service';
 import { MailService } from './mail.service';
 import { PasswordService } from './password.service';
 import { SecurityService } from './security.service';
+import { PlanService } from '../platform/plan.service';
 import { SessionService } from './session.service';
 
 export const MAX_FAILED_LOGINS = 5;
@@ -41,6 +42,7 @@ export class AuthService {
     private readonly mail: MailService,
     private readonly security: SecurityService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
+    private readonly plans: PlanService,
   ) {}
 
   /** Self-serve sign-up: creates the user, the company, and an owner membership atomically. */
@@ -60,6 +62,7 @@ export class AuthService {
         await setTenantContext(tx, tenant!.id);
         await tx.insert(memberships).values({ tenantId: tenant!.id, userId: user!.id, role: 'owner' });
         await tx.$client.query('SELECT seed_crm_defaults($1)', [tenant!.id]);
+        await this.plans.startTrial(tx, tenant!.id);
         await this.audit.record(tx, {
           tenantId: tenant!.id,
           actorUserId: user!.id,
@@ -180,7 +183,7 @@ export class AuthService {
     return this.db.platform(async (tx) => {
       const [user] = await tx.select().from(users).where(eq(users.id, auth.userId)).limit(1);
       const rows = await tx
-        .select({ tenantId: memberships.tenantId, tenantName: tenants.name, slug: tenants.slug, role: memberships.role, membershipId: memberships.id, settings: tenants.settings })
+        .select({ tenantId: memberships.tenantId, tenantName: tenants.name, slug: tenants.slug, role: memberships.role, membershipId: memberships.id, settings: tenants.settings, status: tenants.status })
         .from(memberships)
         .innerJoin(tenants, eq(tenants.id, memberships.tenantId))
         .where(and(eq(memberships.userId, auth.userId), eq(memberships.status, 'active')))
@@ -205,6 +208,7 @@ export class AuthService {
               permissions: [...permissionsForRole(active.role)],
               membershipId: active.membershipId,
               features: { recordingEnabled: !!(active.settings as { recordingEnabled?: boolean } | null)?.recordingEnabled },
+              status: active.status,
             }
           : null,
         memberships: rows.map((r) => ({ tenantId: r.tenantId, tenantName: r.tenantName, role: r.role })),

@@ -6,6 +6,7 @@ import type { TenantAuthContext } from '../common/auth-context';
 import { DbService } from '../common/db.service';
 import { AppError } from '../common/errors';
 import { LLM_PROVIDER, costUsd, type LlmProvider, type LlmRequest } from './llm';
+import { PlanService } from '../platform/plan.service';
 
 export type StepKind = 'context' | 'model_call' | 'validation' | 'tool_call' | 'guard_block' | 'approval_wait' | 'error';
 
@@ -37,6 +38,7 @@ export class AiRuntimeService {
   constructor(
     private readonly db: DbService,
     @Inject(LLM_PROVIDER) private readonly provider: LlmProvider,
+    private readonly plans: PlanService,
   ) {}
 
   get providerReady(): boolean {
@@ -61,13 +63,19 @@ export class AiRuntimeService {
     return { usd: Number(u?.usd ?? 0), runs: r?.n ?? 0 };
   }
 
+  /** The company's own monthly budget, capped by its plan. */
+  async effectiveBudget(tenantId: string, own: number): Promise<number> {
+    const cap = await this.plans.aiCap(tenantId);
+    return cap === null ? own : Math.min(own, cap);
+  }
+
   private async assertCanSpend(tx: Tx, tenantId: string, agent: AgentKey): Promise<void> {
     if (!this.provider.ready) throw new AppError(503, 'AI_NOT_CONFIGURED', 'No AI provider is configured');
     const s = await this.settings(tx, tenantId);
     if (!s.enabled) throw new AppError(403, 'AI_DISABLED', 'AI features are turned off for this company');
     if (!s.agents[agent].enabled) throw new AppError(403, 'AI_AGENT_DISABLED', 'This assistant is turned off for this company');
     const { usd } = await this.monthSpend(tx, tenantId);
-    if (usd >= s.monthlyBudgetUsd) throw new AppError(402, 'AI_BUDGET_EXCEEDED', 'The monthly AI budget has been reached');
+    if (usd >= (await this.effectiveBudget(tenantId, s.monthlyBudgetUsd))) throw new AppError(402, 'AI_BUDGET_EXCEEDED', 'The monthly AI budget has been reached');
   }
 
   async run<T>(

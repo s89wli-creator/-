@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { memberships, sessions, users } from '@rakan/db';
+import { memberships, sessions, tenants, users } from '@rakan/db';
 import { permissionsForRole } from '@rakan/shared';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { Response } from 'express';
@@ -91,12 +91,13 @@ export class SessionService {
       return null;
     }
 
-    let membership: { id: string; role: NonNullable<AuthContext['role']> } | undefined;
+    let membership: { id: string; role: NonNullable<AuthContext['role']>; tenantStatus: string } | undefined;
     if (session.activeTenantId) {
       membership = await this.db.run({ tenantId: session.activeTenantId, userId: user.id }, async (tx) => {
         const [m] = await tx
-          .select({ id: memberships.id, role: memberships.role })
+          .select({ id: memberships.id, role: memberships.role, tenantStatus: tenants.status })
           .from(memberships)
+          .innerJoin(tenants, eq(tenants.id, memberships.tenantId))
           .where(
             and(
               eq(memberships.tenantId, session.activeTenantId!),
@@ -127,6 +128,9 @@ export class SessionService {
       membershipId: membership?.id ?? null,
       role: membership?.role ?? null,
       permissions: membership ? permissionsForRole(membership.role) : [],
+      isPlatformAdmin: user.isPlatformAdmin,
+      mfaSession: !!user.mfaEnabledAt && session.mfaVerified,
+      tenantStatus: membership?.tenantStatus ?? null,
     };
   }
 }
