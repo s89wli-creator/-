@@ -11,8 +11,8 @@ import { errorMessage, type MessageKey } from '@/lib/i18n';
 import { useCan, useI18n, useInvalidate } from '@/lib/providers';
 
 type View = 'pending' | 'history';
-const STATUS_TONE: Record<string, 'warn' | 'success' | 'danger' | 'muted' | 'brand'> = {
-  pending: 'warn', approved: 'brand', executed: 'success', rejected: 'danger', expired: 'muted', execution_failed: 'danger',
+const STATUS_TONE: Record<string, 'warn' | 'success' | 'danger' | 'muted' | 'brand' | 'accent'> = {
+  pending: 'accent', approved: 'brand', executed: 'success', rejected: 'danger', expired: 'muted', execution_failed: 'danger',
 };
 
 /** What exactly will happen if approved: shown verbatim from the stored payload. */

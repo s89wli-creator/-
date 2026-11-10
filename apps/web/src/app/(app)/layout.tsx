@@ -5,6 +5,7 @@ import type { Permission } from '@rakan/shared';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
+import { Logo, Symbol } from '@/components/brand/Logo';
 import { Icon, type IconName } from '@/components/icons';
 import { LoadingState, Select, cx } from '@/components/ui';
 import { useConfirm } from '@/components/feedback';
@@ -168,18 +169,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       aria-current={isActive(n.href) ? 'page' : undefined}
       className={cx(
         'group relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-ui transition-colors duration-150',
-        isActive(n.href) ? 'bg-brand-50 font-semibold text-brand-700' : 'text-fg-sub hover:bg-subtle-strong hover:text-fg',
+        // Identity 1.0: active item = deeper petrol, amber label and amber dot.
+        isActive(n.href) ? 'bg-petrol-deep font-semibold text-accent' : 'text-fg-sub hover:bg-subtle-strong hover:text-fg',
       )}
     >
+      <Icon name={n.icon} className={isActive(n.href) ? '' : 'text-fg-muted transition-colors group-hover:text-fg-sub'} />
+      <span className="flex-1">{t(n.label)}</span>
       <span
         aria-hidden
         className={cx(
-          'absolute inset-y-2 start-0 w-0.5 rounded-full bg-brand-600 transition-[transform,opacity] duration-200 ease-out',
-          isActive(n.href) ? 'scale-y-100 opacity-100' : 'scale-y-0 opacity-0',
+          'size-2 rounded-full bg-accent transition-[transform,opacity] duration-200 ease-out',
+          isActive(n.href) ? 'scale-100 opacity-100' : 'scale-0 opacity-0',
         )}
       />
-      <Icon name={n.icon} className={isActive(n.href) ? '' : 'text-fg-muted transition-colors group-hover:text-fg-sub'} />
-      {t(n.label)}
     </Link>
   );
 
@@ -199,12 +201,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   );
 
   const brand = (
-    <div className="flex items-center gap-3 px-1">
-      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-600 text-lg font-bold text-on-brand shadow-xs" aria-hidden>ر</span>
-      <div className="min-w-0">
-        <p className="font-semibold leading-tight">{t('app.name')}</p>
-        <p className="truncate text-xs text-fg-muted">{me.data.activeTenant?.name ?? '—'}</p>
-      </div>
+    <div className="space-y-2 px-1">
+      <Logo height={30} tone="reverse" label={t('app.name')} />
+      <p className="truncate text-xs text-fg-muted">{me.data.activeTenant?.name ?? '—'}</p>
     </div>
   );
 
@@ -247,7 +246,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </a>
 
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh w-72 shrink-0 flex-col gap-6 overflow-y-auto border-e border-line bg-surface p-4 lg:flex">
+      <aside className="on-petrol sticky top-0 hidden h-dvh w-72 shrink-0 flex-col gap-6 overflow-y-auto p-4 lg:flex">
         {brand}
         {tenantSwitcher}
         {navContent}
@@ -257,7 +256,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       {/* Phone top bar */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-surface/90 px-4 py-2.5 backdrop-blur lg:hidden">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-600 font-bold text-on-brand" aria-hidden>ر</span>
+          <Symbol size={32} />
           <span className="truncate font-semibold">{me.data.activeTenant?.name ?? t('app.name')}</span>
         </div>
         <button
@@ -277,7 +276,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <div className={cx('absolute inset-0 bg-scrim', drawer === 'closing' ? 'animate-fade-out' : 'animate-fade-in')} onClick={closeDrawer} />
           <div
             className={cx(
-              'absolute inset-y-0 start-0 flex w-[min(20rem,86vw)] flex-col gap-6 overflow-y-auto bg-surface p-4 shadow-xl',
+              'on-petrol absolute inset-y-0 start-0 flex w-[min(20rem,86vw)] flex-col gap-6 overflow-y-auto p-4 shadow-xl',
               drawer === 'closing' ? 'animate-fade-out' : 'animate-drawer-in',
             )}
           >

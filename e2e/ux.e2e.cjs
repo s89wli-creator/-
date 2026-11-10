@@ -85,7 +85,7 @@ const assert = (c, m) => { if (!c) throw new Error(m); };
   await page.getByRole('radio', { name: 'داكن' }).click();
   assert((await page.evaluate(() => document.documentElement.dataset.theme)) === 'dark', 'theme attribute not set');
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  assert(bg === 'rgb(17, 19, 18)', `dark page background expected rgb(17, 19, 18), got ${bg}`);
+  assert(bg === 'rgb(11, 27, 29)', `dark page background expected rgb(11, 27, 29) (identity 1.0 #0b1b1d), got ${bg}`);
   await page.waitForTimeout(900);
   await page.screenshot({ path: `${OUT}/ux-04-dashboard-dark.png`, fullPage: true });
   await page.reload();

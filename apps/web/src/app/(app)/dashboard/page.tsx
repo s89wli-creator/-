@@ -33,7 +33,7 @@ function Stat({ label, value, format, hint, icon, emphasis }: { label: string; v
           <Icon name={icon} size={16} />
         </span>
       </div>
-      <p className="mt-2 text-3xl font-semibold">{value === null ? '—' : <AnimatedNumber value={value} format={format} />}</p>
+      <p className="mt-2 font-display text-3xl font-semibold text-heading">{value === null ? '—' : <AnimatedNumber value={value} format={format} />}</p>
       {hint && <p className="mt-1 text-xs text-fg-muted">{hint}</p>}
     </Card>
   );

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { IBM_Plex_Sans_Arabic } from 'next/font/google';
+import { Alexandria, IBM_Plex_Sans_Arabic } from 'next/font/google';
 import { cookies } from 'next/headers';
 import type { ReactNode } from 'react';
 import { LOCALE_COOKIE, type Locale } from '@/lib/i18n';
@@ -14,6 +14,12 @@ const plex = IBM_Plex_Sans_Arabic({
   variable: '--font-plex-arabic',
   display: 'swap',
 });
+const alexandria = Alexandria({
+  subsets: ['arabic', 'latin'],
+  weight: ['400', '600', '700', '800'],
+  variable: '--font-alexandria',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: { default: 'راكان — Rakan', template: '%s · راكان' },
@@ -22,15 +28,15 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   applicationName: 'راكان',
   appleWebApp: { capable: true, title: 'راكان', statusBarStyle: 'default' },
-  icons: { icon: '/icons/icon-192.png', apple: '/icons/apple-touch-icon.png' },
+  icons: { icon: [{ url: '/brand/favicon.svg', type: 'image/svg+xml' }, { url: '/icons/favicon-32.png', sizes: '32x32' }], apple: '/icons/apple-touch-icon.png' },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f6f7f5' },
-    { media: '(prefers-color-scheme: dark)', color: '#111312' },
+    { media: '(prefers-color-scheme: light)', color: '#0e4a52' },
+    { media: '(prefers-color-scheme: dark)', color: '#08292d' },
   ],
 };
 
@@ -40,7 +46,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const stored = jar.get(THEME_COOKIE)?.value;
   const theme: Theme = stored === 'light' || stored === 'dark' ? stored : 'system';
   return (
-    <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'} className={plex.variable} data-theme={theme === 'system' ? undefined : theme}>
+    <html lang={locale} dir={locale === 'ar' ? 'rtl' : 'ltr'} className={`${plex.variable} ${alexandria.variable}`} data-theme={theme === 'system' ? undefined : theme}>
       <body className="min-h-dvh bg-page font-sans text-base text-fg">
         <Providers locale={locale} theme={theme}>
           <ToastProvider>

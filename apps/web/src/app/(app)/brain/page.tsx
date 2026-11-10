@@ -13,7 +13,7 @@ import type { MessageKey } from '@/lib/i18n';
 import { useCan, useI18n, useInvalidate } from '@/lib/providers';
 
 type Tab = 'knowledge' | 'documents';
-const STATUS_TONE = { draft: 'neutral', pending_confirmation: 'warn', approved: 'success', archived: 'muted' } as const;
+const STATUS_TONE = { draft: 'neutral', pending_confirmation: 'accent', approved: 'success', archived: 'muted' } as const;
 const TRUST_TONE = { unverified: 'warn', approved: 'success', suspicious: 'danger' } as const;
 
 /** Structured inputs for sections whose facts the assistant must quote exactly. */

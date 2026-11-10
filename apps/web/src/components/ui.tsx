@@ -168,7 +168,7 @@ export function CardHeading({ children, action }: { children: ReactNode; action?
   );
 }
 
-type Tone = 'neutral' | 'brand' | 'warn' | 'muted' | 'success' | 'danger';
+type Tone = 'neutral' | 'brand' | 'warn' | 'muted' | 'success' | 'danger' | 'accent';
 export function Badge({ children, tone = 'neutral', dot }: { children: ReactNode; tone?: Tone; dot?: boolean }) {
   const tones: Record<Tone, string> = {
     neutral: 'bg-subtle-strong text-fg-sub',
@@ -177,6 +177,8 @@ export function Badge({ children, tone = 'neutral', dot }: { children: ReactNode
     muted: 'bg-subtle text-fg-muted',
     success: 'bg-success-soft text-success',
     danger: 'bg-danger-soft text-danger',
+    /** Identity amber: something waits for the user (approval, sync). */
+    accent: 'bg-accent text-on-accent',
   };
   return (
     <span className={cx('inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium', tones[tone])}>

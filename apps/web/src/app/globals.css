@@ -8,6 +8,8 @@
 
 @theme inline {
   --font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui, "Segoe UI", Tahoma, sans-serif;
+  /* Identity 1.0: Alexandria for headings and Latin display text; IBM Plex Sans Arabic for body and UI. */
+  --font-display: var(--font-alexandria), var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
 
   --color-page: var(--page);
   --color-surface: var(--surface);
@@ -23,6 +25,15 @@
   --color-brand-600: var(--brand-600);
   --color-brand-700: var(--brand-700);
   --color-on-brand: var(--on-brand);
+  --color-heading: var(--heading);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-petrol: var(--petrol);
+  --color-petrol-deep: var(--petrol-deep);
+  --color-on-petrol: var(--on-petrol);
+  --color-on-petrol-sub: var(--on-petrol-sub);
+  --color-on-petrol-muted: var(--on-petrol-muted);
   --color-danger: var(--danger);
   --color-danger-soft: var(--danger-soft);
   --color-danger-line: var(--danger-line);
@@ -118,29 +129,40 @@
 :root {
   color-scheme: light;
   --start-dir: 1; /* RTL: start edge is the right */
-  --page: #f6f7f5;
+  --page: #f1f3f0;
   --surface: #ffffff;
-  --subtle: #f1f2ef;
-  --subtle-strong: #e8e9e5;
-  --fg: #1c1c19;
-  --fg-sub: #3f3e38;
-  --fg-muted: #62615a;
-  --line-soft: #ebebe6;
-  --line: #dcdcd5;
-  --line-strong: #87867e;
-  --brand-50: #ecf8f4;
-  --brand-600: #0b7563;
-  --brand-700: #0a5f51;
+  --subtle: #f4f6f3;
+  --subtle-strong: #e9ece8;
+  --fg: #17282b;
+  --fg-sub: #34484b;
+  --fg-muted: #5a6b6d;
+  --line-soft: #e8ebe7;
+  --line: #d8dddb;
+  --line-strong: #7c8b8c;
+  --heading: #0e4a52;
+  --logo-ink: #0e4a52;
+  --logo-check: #ffffff;
+  --brand-50: #e6f2ee;
+  --brand-600: #0a7a63;
+  --brand-700: #09634f;
   --on-brand: #ffffff;
+  --accent: #e9a23b;
+  --accent-soft: #fdf2df;
+  --on-accent: #2b1d05;
+  --petrol: #0e4a52;
+  --petrol-deep: #0a3a41;
+  --on-petrol: #ffffff;
+  --on-petrol-sub: #b8ccce;
+  --on-petrol-muted: #9ebdbf;
   --danger: #b42318;
   --danger-soft: #fef3f2;
   --danger-line: #fecdca;
-  --warn: #93370d;
-  --warn-soft: #fffaeb;
-  --warn-line: #fedf89;
+  --warn: #7a4a00;
+  --warn-soft: #fdf2df;
+  --warn-line: #f3d29c;
   --success: #067647;
-  --success-soft: #ecfdf3;
-  --scrim: rgb(17 19 18 / 0.5);
+  --success-soft: #e6f4ee;
+  --scrim: rgb(9 30 33 / 0.5);
 }
 [dir="ltr"] {
   --start-dir: -1;
@@ -148,25 +170,36 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page: #111312;
-  --surface: #1a1d1b;
-  --subtle: #202421;
-  --subtle-strong: #2a2e2b;
-  --fg: #ecece7;
-  --fg-sub: #cfcfc7;
-  --fg-muted: #a3a39a;
-  --line-soft: #262a27;
-  --line: #2e322f;
-  --line-strong: #737a74;
-  --brand-50: #12302a;
-  --brand-600: #2fb39a;
-  --brand-700: #5fd0b8;
-  --on-brand: #08201b;
+  --page: #0b1b1d;
+  --surface: #11272a;
+  --subtle: #142e31;
+  --subtle-strong: #1b3a3e;
+  --fg: #e7eeed;
+  --fg-sub: #c9d6d6;
+  --fg-muted: #9fb1b2;
+  --line-soft: #183236;
+  --line: #22403f;
+  --line-strong: #6a8486;
+  --heading: #8fd0d6;
+  --logo-ink: #ffffff;
+  --logo-check: #0e4a52;
+  --brand-50: #0f3a33;
+  --brand-600: #3cbf9c;
+  --brand-700: #6fd6bb;
+  --on-brand: #04221b;
+  --accent: #e9a23b;
+  --accent-soft: #2a2112;
+  --on-accent: #2b1d05;
+  --petrol: #08292d;
+  --petrol-deep: #051c1f;
+  --on-petrol: #ffffff;
+  --on-petrol-sub: #b8ccce;
+  --on-petrol-muted: #9ebdbf;
   --danger: #f97066;
   --danger-soft: #2d1512;
   --danger-line: #5a2620;
-  --warn: #fdb022;
-  --warn-soft: #2b2111;
+  --warn: #f0b860;
+  --warn-soft: #2a2112;
   --warn-line: #5c4210;
   --success: #47cd89;
   --success-soft: #0f2a1d;
@@ -175,25 +208,36 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="dark"]) {
     color-scheme: dark;
-    --page: #111312;
-    --surface: #1a1d1b;
-    --subtle: #202421;
-    --subtle-strong: #2a2e2b;
-    --fg: #ecece7;
-    --fg-sub: #cfcfc7;
-    --fg-muted: #a3a39a;
-    --line-soft: #262a27;
-    --line: #2e322f;
-    --line-strong: #737a74;
-    --brand-50: #12302a;
-    --brand-600: #2fb39a;
-    --brand-700: #5fd0b8;
-    --on-brand: #08201b;
+    --page: #0b1b1d;
+    --surface: #11272a;
+    --subtle: #142e31;
+    --subtle-strong: #1b3a3e;
+    --fg: #e7eeed;
+    --fg-sub: #c9d6d6;
+    --fg-muted: #9fb1b2;
+    --line-soft: #183236;
+    --line: #22403f;
+    --line-strong: #6a8486;
+    --heading: #8fd0d6;
+  --logo-ink: #ffffff;
+  --logo-check: #0e4a52;
+    --brand-50: #0f3a33;
+    --brand-600: #3cbf9c;
+    --brand-700: #6fd6bb;
+    --on-brand: #04221b;
+    --accent: #e9a23b;
+    --accent-soft: #2a2112;
+    --on-accent: #2b1d05;
+    --petrol: #08292d;
+    --petrol-deep: #051c1f;
+    --on-petrol: #ffffff;
+    --on-petrol-sub: #b8ccce;
+    --on-petrol-muted: #9ebdbf;
     --danger: #f97066;
     --danger-soft: #2d1512;
     --danger-line: #5a2620;
-    --warn: #fdb022;
-    --warn-soft: #2b2111;
+    --warn: #f0b860;
+    --warn-soft: #2a2112;
     --warn-line: #5c4210;
     --success: #47cd89;
     --success-soft: #0f2a1d;
@@ -216,6 +260,38 @@ body {
   outline-offset: 2px;
   border-radius: 6px;
 }
+/* Headings use the display face and the petrol heading color (identity 1.0). */
+h1,
+h2 {
+  font-family: var(--font-display);
+  color: var(--heading);
+}
+h3 {
+  font-family: var(--font-display);
+}
+
+/*
+ * Petrol surfaces (sidebar, drawer, brand panels): components inside keep using semantic tokens,
+ * which are re-pointed here to light-on-petrol values.
+ */
+.on-petrol {
+  --fg: var(--on-petrol);
+  --fg-sub: var(--on-petrol-sub);
+  --fg-muted: var(--on-petrol-muted);
+  --heading: var(--on-petrol);
+  --logo-ink: #ffffff;
+  --logo-check: #0e4a52;
+  --surface: var(--petrol-deep);
+  --subtle: rgb(255 255 255 / 0.06);
+  --subtle-strong: rgb(255 255 255 / 0.1);
+  --line-soft: rgb(255 255 255 / 0.12);
+  --line: rgb(255 255 255 / 0.18);
+  --danger: #ffb4ab;
+  --danger-soft: rgb(255 180 171 / 0.12);
+  background: var(--petrol);
+  color: var(--on-petrol);
+}
+
 ::selection {
   background: var(--brand-50);
   color: var(--fg);

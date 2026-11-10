@@ -4,12 +4,12 @@
  * - Pages (navigations): network-first; the last good copy is served offline, else /offline.html.
  * - API calls are never cached here: the app stores data itself (IndexedDB, per user, wiped on sign-out).
  */
-const VERSION = 'rakan-v1';
+const VERSION = 'rakan-v2';
 const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(PAGES).then((c) => c.addAll(['/offline.html', '/manifest.webmanifest', '/icons/icon-192.png'])).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(PAGES).then((c) => c.addAll(['/offline.html', '/manifest.webmanifest', '/icons/icon-192.png', '/brand/favicon.svg'])).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -43,7 +43,7 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
-  if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/icons/')) {
+  if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/icons/') || url.pathname.startsWith('/brand/')) {
     event.respondWith(cacheFirst(req));
   } else if (req.mode === 'navigate') {
     event.respondWith(pageNetworkFirst(req));

@@ -98,7 +98,7 @@ export function FieldSync() {
         <span className="flex items-center gap-2">
           <Icon name={!online ? 'wifiOff' : 'upload'} size={16} className={!online ? 'text-fg-sub' : 'text-brand-700'} />
           {!online ? t('field.offline') : syncing ? t('field.syncing') : failed ? t('field.failedCount', { n: failed }) : t('field.waiting')}
-          {pending > 0 && <Badge tone="brand">{t('field.pendingCount', { n: pending })}</Badge>}
+          {pending > 0 && <Badge tone="accent">{t('field.pendingCount', { n: pending })}</Badge>}
         </span>
         <span className="flex gap-2">
           {(pending > 0 || failed > 0) && <Button variant="ghost" className="min-h-9" onClick={() => setOpen(true)}>{t('field.details')}</Button>}

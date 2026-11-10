@@ -197,8 +197,8 @@ export function LeadScorePanel({ accountId, canWrite }: { accountId: string; can
 
 // ================================================================ follow-up drafts
 
-const DRAFT_TONE: Record<string, 'neutral' | 'warn' | 'success' | 'danger' | 'brand' | 'muted'> = {
-  draft: 'neutral', pending_approval: 'warn', approved: 'brand', sent: 'success', rejected: 'danger', cancelled: 'muted',
+const DRAFT_TONE: Record<string, 'neutral' | 'warn' | 'success' | 'danger' | 'brand' | 'muted' | 'accent'> = {
+  draft: 'neutral', pending_approval: 'accent', approved: 'brand', sent: 'success', rejected: 'danger', cancelled: 'muted',
 };
 
 export function FollowUpPanel({ accountId, contacts, canWrite }: { accountId: string; contacts: ContactDto[]; canWrite: boolean }) {
