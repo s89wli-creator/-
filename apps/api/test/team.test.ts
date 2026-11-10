@@ -16,6 +16,7 @@ beforeEach(async () => {
 describe('invitations', () => {
   it('owner invites a rep; rep accepts, signs in and gets only rep permissions', async () => {
     const { client: owner } = await registerCompany(app, { email: 'o@acme.sa', company: 'Acme' });
+    outbox(app).length = 0; // drop the sign-up verification email
     const inv = await owner.post('/team/invitations', { email: 'Rep@Acme.sa', role: 'rep' }).expect(201);
     expect(inv.body.email).toBe('rep@acme.sa');
     expect((await owner.get('/team/invitations').expect(200)).body).toHaveLength(1);

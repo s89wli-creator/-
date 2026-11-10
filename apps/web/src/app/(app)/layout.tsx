@@ -42,6 +42,7 @@ const GROUPS: { label?: MessageKey; items: NavItem[] }[] = [
       { href: '/settings/crm', label: 'nav.crmSettings', permission: 'crm.settings.manage', icon: 'sliders' },
       { href: '/settings/company', label: 'nav.company', permission: 'tenant.settings.read', icon: 'settings' },
       { href: '/settings/audit', label: 'nav.audit', permission: 'audit.read', icon: 'list' },
+      { href: '/settings/security', label: 'nav.security', icon: 'lock' },
     ],
   },
 ];
@@ -271,6 +272,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       <main id="main" className="min-w-0 flex-1 px-4 pb-28 pt-6 sm:px-8 lg:pb-12 lg:pt-10">
         <div key={pathname} className="mx-auto max-w-[70rem] animate-page-in">
+          {!me.data.user.emailVerified && pathname !== '/settings/security' && (
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 text-sm text-fg">
+              <span className="flex items-center gap-2"><Icon name="info" size={20} className="shrink-0 text-warn" />{t('security.email.banner')}</span>
+              <Link href="/settings/security" className="font-medium text-brand-700 hover:underline">{t('security.email.resend')}</Link>
+            </div>
+          )}
           {children}
         </div>
       </main>

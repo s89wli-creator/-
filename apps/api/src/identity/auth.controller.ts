@@ -1,6 +1,6 @@
-import { Body, Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Req, Res } from '@nestjs/common';
 import {
-  forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema, switchTenantSchema,
+  forgotPasswordSchema, loginSchema, mfaLoginSchema, registerSchema, resetPasswordSchema, switchTenantSchema, totpCodeSchema, verifyEmailSchema,
   type MeResponse,
 } from '@rakan/shared';
 import type { Response } from 'express';
@@ -8,7 +8,9 @@ import { z } from 'zod';
 import type { AuthContext, RequestMeta } from '../common/auth-context';
 import { CSRF_COOKIE } from '../common/cookies';
 import { Auth, AuthRateLimited, Meta, Public, TenantIsolationExempt, type RakanRequest } from '../common/decorators';
+import { UuidPipe } from '../common/uuid.pipe';
 import { ZodPipe } from '../common/zod.pipe';
+import { SecurityService } from './security.service';
 import { AuthService } from './auth.service';
 import { SessionService } from './session.service';
 
@@ -17,6 +19,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly sessions: SessionService,
+    private readonly securitySvc: SecurityService,
   ) {}
 
   /** Returns the CSRF token (the cookie is set by middleware on any request). */
@@ -47,9 +50,76 @@ export class AuthController {
     @Body(new ZodPipe(loginSchema)) body: z.infer<typeof loginSchema>,
     @Meta() meta: RequestMeta,
     @Res({ passthrough: true }) res: Response,
+  ): Promise<{ ok: true } | { mfaRequired: true; challenge: string }> {
+    const result = await this.auth.login(body, meta);
+    if ('mfaChallenge' in result) return { mfaRequired: true, challenge: result.mfaChallenge };
+    this.sessions.setCookie(res, result.token);
+    return { ok: true };
+  }
+
+  @Public()
+  @AuthRateLimited()
+  @HttpCode(200)
+  @Post('mfa/verify')
+  async mfaVerify(
+    @Body(new ZodPipe(mfaLoginSchema)) body: z.infer<typeof mfaLoginSchema>,
+    @Meta() meta: RequestMeta,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<{ ok: true }> {
-    const { token } = await this.auth.login(body, meta);
+    const { token } = await this.auth.completeMfa(body.challenge, body.code, meta);
     this.sessions.setCookie(res, token);
+    return { ok: true };
+  }
+
+  @TenantIsolationExempt('acts on the caller own account only')
+  @Get('security')
+  security(@Auth() auth: AuthContext) {
+    return this.securitySvc.overview(auth);
+  }
+
+  @TenantIsolationExempt('acts on the caller own account only')
+  @HttpCode(200)
+  @Post('mfa/setup')
+  mfaSetup(@Auth() auth: AuthContext) {
+    return this.securitySvc.setup(auth);
+  }
+
+  @TenantIsolationExempt('acts on the caller own account only')
+  @HttpCode(200)
+  @Post('mfa/enable')
+  mfaEnable(@Auth() auth: AuthContext, @Body(new ZodPipe(totpCodeSchema)) body: { code: string }, @Meta() meta: RequestMeta) {
+    return this.securitySvc.enable(auth, body.code, meta);
+  }
+
+  @TenantIsolationExempt('acts on the caller own account only')
+  @HttpCode(204)
+  @Post('mfa/disable')
+  async mfaDisable(@Auth() auth: AuthContext, @Body(new ZodPipe(totpCodeSchema)) body: { code: string }, @Meta() meta: RequestMeta) {
+    await this.securitySvc.disable(auth, body.code, meta);
+  }
+
+  @TenantIsolationExempt('scoped to the caller own sessions; other ids are not found')
+  @HttpCode(204)
+  @Delete('sessions/:id')
+  async revokeSession(@Auth() auth: AuthContext, @Param('id', UuidPipe) id: string, @Meta() meta: RequestMeta) {
+    await this.securitySvc.revokeSession(auth, id, meta);
+  }
+
+  @Public()
+  @AuthRateLimited()
+  @HttpCode(200)
+  @Post('email/verify')
+  async verifyEmail(@Body(new ZodPipe(verifyEmailSchema)) body: { token: string }, @Meta() meta: RequestMeta): Promise<{ ok: true }> {
+    await this.securitySvc.verifyEmail(body.token, meta);
+    return { ok: true };
+  }
+
+  @TenantIsolationExempt('acts on the caller own account only')
+  @AuthRateLimited()
+  @HttpCode(202)
+  @Post('email/resend')
+  async resendVerification(@Auth() auth: AuthContext): Promise<{ ok: true }> {
+    await this.securitySvc.sendVerification(auth.userId);
     return { ok: true };
   }
 

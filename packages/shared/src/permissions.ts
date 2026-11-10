@@ -26,6 +26,12 @@ export const PERMISSIONS = [
   'crm.visit.read',
   'crm.visit.write',
   'reports.read',
+  'brain.read',
+  'brain.manage',
+  'ai.use',
+  'ai.manage',
+  'ai.runs.read',
+  'approvals.decide',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -56,6 +62,11 @@ export const ROLE_PERMISSIONS: Record<SystemRole, readonly Permission[]> = {
     'crm.visit.read',
     'crm.visit.write',
     'reports.read',
+    'brain.read',
+    'brain.manage',
+    'ai.use',
+    'ai.runs.read',
+    'approvals.decide',
   ],
   // Reps work only on records assigned to them (enforced per record in the API; see RecordScope).
   rep: [
@@ -68,6 +79,8 @@ export const ROLE_PERMISSIONS: Record<SystemRole, readonly Permission[]> = {
     'crm.task.write',
     'crm.visit.read',
     'crm.visit.write',
+    'brain.read',
+    'ai.use',
   ],
   readonly: [
     'tenant.settings.read',
@@ -78,6 +91,7 @@ export const ROLE_PERMISSIONS: Record<SystemRole, readonly Permission[]> = {
     'crm.task.read',
     'crm.visit.read',
     'reports.read',
+    'brain.read',
   ],
 };
 

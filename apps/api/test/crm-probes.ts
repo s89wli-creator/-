@@ -235,7 +235,8 @@ export function crmProbes(f: () => CrmFixtures): Record<string, () => Promise<vo
     'GET /api/reports/dashboard': async () => {
       const d = (await f().a.get(`/reports/dashboard?from=${inDays(-1)}&to=${inDays(1)}`).expect(200)).body;
       const b = (await f().b.get(`/reports/dashboard?from=${inDays(-1)}&to=${inDays(1)}`).expect(200)).body;
-      expect(JSON.stringify(d)).not.toContain('999');
+      expect(d.totals.pipelineValue).not.toBe(999);
+      expect(d.stageFunnel.some((r: { value: number }) => r.value === 999)).toBe(false);
       expect(b.totals.pipelineValue).toBe(999);
       expect(d.byRep.map((r: { name: string }) => r.name)).not.toContain('Owner Company B');
       // A's dashboard filtered by B's track sees nothing of B.

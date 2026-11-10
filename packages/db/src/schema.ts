@@ -20,6 +20,9 @@ export const users = pgTable('users', {
   failedLoginCount: integer('failed_login_count').notNull().default(0),
   lockedUntil: ts('locked_until'),
   lastLoginAt: ts('last_login_at'),
+  mfaSecretEnc: text('mfa_secret_enc'),
+  mfaEnabledAt: ts('mfa_enabled_at'),
+  mfaRecoveryHashes: text('mfa_recovery_hashes').array().notNull().default(sql`'{}'`),
   createdAt: ts('created_at').notNull().defaultNow(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
   disabledAt: ts('disabled_at'),
@@ -54,6 +57,7 @@ export const sessions = pgTable('sessions', {
   idleExpiresAt: ts('idle_expires_at').notNull(),
   absoluteExpiresAt: ts('absolute_expires_at').notNull(),
   revokedAt: ts('revoked_at'),
+  mfaVerified: boolean('mfa_verified').notNull().default(false),
 });
 
 export const passwordResetTokens = pgTable('password_reset_tokens', {

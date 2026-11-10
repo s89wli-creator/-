@@ -1,9 +1,10 @@
 import { Pool, type PoolClient } from 'pg';
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import * as baseSchema from './schema';
+import * as aiSchema from './schema-ai';
 import * as crmSchema from './schema-crm';
 
-const schema = { ...baseSchema, ...crmSchema };
+const schema = { ...baseSchema, ...crmSchema, ...aiSchema };
 
 export type Tx = NodePgDatabase<typeof schema> & { $client: PoolClient };
 

@@ -16,6 +16,7 @@ import { AuthController } from './identity/auth.controller';
 import { AuthService } from './identity/auth.service';
 import { MailService } from './identity/mail.service';
 import { PasswordService } from './identity/password.service';
+import { SecurityService } from './identity/security.service';
 import { SessionService } from './identity/session.service';
 import { InvitationsController, TeamController } from './team/team.controller';
 import { TeamService } from './team/team.service';
@@ -84,7 +85,7 @@ export class AppModule implements NestModule {
         VisitsController, ImportsController, ReportsController,
       ],
       providers: [
-        DbService, PasswordService, SessionService, MailService, AuditService,
+        DbService, PasswordService, SessionService, MailService, AuditService, SecurityService,
         AuthService, TenantService, TeamService, TerritoryService, FieldCryptoService,
         ScopeService, ActivityService, CrmSettingsService, AccountsService, OpportunitiesService, TasksService, VisitsService,
         ImportsService, ReportsService,

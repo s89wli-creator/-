@@ -116,6 +116,7 @@ describe('login and lockout', () => {
 describe('password reset', () => {
   it('resets via emailed single-use token and revokes existing sessions', async () => {
     const { client: owner } = await registerCompany(app, { email: 'reset@a.sa', company: 'Alpha' });
+    outbox(app).length = 0; // drop the sign-up verification email
     const anon = await client(app);
     await anon.post('/auth/password/forgot', { email: 'reset@a.sa' }).expect(202);
     // Unknown email: same response, no email sent.

@@ -85,6 +85,8 @@ export const accounts = pgTable('accounts', {
   customFields: jsonb('custom_fields').$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
   importJobId: uuid('import_job_id'),
   lastActivityAt: ts('last_activity_at'),
+  score: integer('score'),
+  scoreTier: text('score_tier'),
   createdBy: uuid('created_by'),
   createdAt: ts('created_at').notNull().defaultNow(),
   updatedAt: ts('updated_at').notNull().defaultNow(),

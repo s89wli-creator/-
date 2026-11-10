@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- CLI script: prints progress to the terminal */
 /**
  * Development only: fills a demo company through the public API so the UI can be reviewed with content.
  * All names are fictional. Usage: node scripts/seed-demo.mjs [apiBase]

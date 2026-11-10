@@ -24,6 +24,14 @@ describe('permission matrix', () => {
     }
     expect(hasPermission('rep', 'crm.visit.write')).toBe(true);
   });
+  it('only owner manages AI budget; reps use AI but cannot approve or edit the Sales Brain', () => {
+    expect(hasPermission('owner', 'ai.manage')).toBe(true);
+    expect(hasPermission('manager', 'ai.manage')).toBe(false);
+    expect(hasPermission('rep', 'ai.use')).toBe(true);
+    expect(hasPermission('rep', 'approvals.decide')).toBe(false);
+    expect(hasPermission('rep', 'brain.manage')).toBe(false);
+    expect(hasPermission('readonly', 'ai.use')).toBe(false);
+  });
   it('unknown role has nothing', () => {
     expect(hasPermission('superhacker', 'audit.read')).toBe(false);
   });

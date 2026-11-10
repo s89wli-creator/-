@@ -11,6 +11,7 @@ import { AppError, conflict } from '../common/errors';
 import { AuditService } from '../audit/audit.service';
 import { MailService } from './mail.service';
 import { PasswordService } from './password.service';
+import { SecurityService } from './security.service';
 import { SessionService } from './session.service';
 
 export const MAX_FAILED_LOGINS = 5;
@@ -38,6 +39,7 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly audit: AuditService,
     private readonly mail: MailService,
+    private readonly security: SecurityService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -75,10 +77,12 @@ export class AuthService {
       }
       throw e;
     }
+    await this.security.sendVerification(ids.userId, input.locale);
     return { token: await this.sessions.create(ids.userId, ids.tenantId, meta) };
   }
 
-  async login(input: LoginInput, meta: RequestMeta): Promise<{ token: string }> {
+  /** Password step. With two-step verification on, returns a short-lived challenge instead of a session. */
+  async login(input: LoginInput, meta: RequestMeta): Promise<{ token: string } | { mfaChallenge: string }> {
     const [user] = await this.db.platform((tx) => tx.select().from(users).where(eq(users.email, input.email)).limit(1));
     if (!user) {
       await this.passwords.burn(input.password);
@@ -117,6 +121,21 @@ export class AuthService {
       throw invalidCredentials();
     }
 
+    if (user.mfaEnabledAt) {
+      await this.db.platform((tx) => tx.update(users).set({ failedLoginCount: 0, lockedUntil: null }).where(eq(users.id, user.id)));
+      return { mfaChallenge: await this.security.createChallenge(user.id) };
+    }
+    return { token: await this.startSession(user.id, meta, false) };
+  }
+
+  /** Second step: code from the authenticator app (or a recovery code). */
+  async completeMfa(challenge: string, code: string, meta: RequestMeta): Promise<{ token: string }> {
+    const userId = await this.security.completeChallenge(challenge, code, meta);
+    return { token: await this.startSession(userId, meta, true) };
+  }
+
+  private async startSession(userId: string, meta: RequestMeta, mfaVerified: boolean): Promise<string> {
+    const user = { id: userId };
     const activeTenantId = await this.db.platform(async (tx) => {
       const [m] = await tx
         .select({ tenantId: memberships.tenantId })
@@ -140,7 +159,7 @@ export class AuthService {
       return m?.tenantId ?? null;
     }, user.id);
 
-    return { token: await this.sessions.create(user.id, activeTenantId, meta) };
+    return this.sessions.create(user.id, activeTenantId, meta, mfaVerified);
   }
 
   async logout(auth: AuthContext, meta: RequestMeta): Promise<void> {
@@ -174,6 +193,8 @@ export class AuthService {
           fullName: user!.fullName,
           locale: user!.locale,
           isPlatformAdmin: user!.isPlatformAdmin,
+          emailVerified: !!user!.emailVerifiedAt,
+          mfaEnabled: !!user!.mfaEnabledAt,
         },
         activeTenant: active
           ? {

@@ -1,3 +1,4 @@
+import { arAi, enAi } from './i18n-ai';
 import { arCrm, enCrm } from './i18n-crm';
 
 export type Locale = 'ar' | 'en';
@@ -145,7 +146,7 @@ const arBase = {
   'form.vat': 'الرقم الضريبي 15 رقماً يبدأ وينتهي بـ 3.',
 };
 
-const ar = { ...arBase, ...arCrm };
+const ar = { ...arBase, ...arCrm, ...arAi };
 export type MessageKey = keyof typeof ar;
 
 const enBase: Record<keyof typeof arBase, string> = {
@@ -290,7 +291,7 @@ const enBase: Record<keyof typeof arBase, string> = {
   'form.vat': 'VAT number is 15 digits starting and ending with 3.',
 };
 
-const en: Record<MessageKey, string> = { ...enBase, ...enCrm };
+const en: Record<MessageKey, string> = { ...enBase, ...enCrm, ...enAi };
 
 export const messages: Record<Locale, Record<MessageKey, string>> = { ar, en };
 
@@ -311,6 +312,12 @@ const AUDIT_ACTIONS: Record<string, { ar: string; en: string }> = {
   'auth.login': { ar: 'تسجيل دخول', en: 'Signed in' },
   'auth.logout': { ar: 'تسجيل خروج', en: 'Signed out' },
   'auth.switch_tenant': { ar: 'تبديل الشركة', en: 'Switched company' },
+  'auth.mfa_enabled': { ar: 'تفعيل التحقق بخطوتين', en: 'Two-step verification on' },
+  'auth.mfa_disabled': { ar: 'إيقاف التحقق بخطوتين', en: 'Two-step verification off' },
+  'auth.mfa_failed': { ar: 'رمز تحقق خاطئ', en: 'Wrong verification code' },
+  'auth.mfa_recovery_code_used': { ar: 'استخدام رمز استرداد', en: 'Recovery code used' },
+  'auth.email_verified': { ar: 'تأكيد البريد', en: 'Email confirmed' },
+  'auth.session_revoked': { ar: 'إنهاء جلسة', en: 'Session ended' },
   'invitation.create': { ar: 'إرسال دعوة', en: 'Invitation sent' },
   'invitation.revoke': { ar: 'إلغاء دعوة', en: 'Invitation revoked' },
   'invitation.accept': { ar: 'قبول دعوة', en: 'Invitation accepted' },

@@ -22,7 +22,7 @@ export class SessionService {
     return new Date(Date.now() + this.config.SESSION_IDLE_HOURS * 3600_000);
   }
 
-  async create(userId: string, activeTenantId: string | null, meta: RequestMeta): Promise<string> {
+  async create(userId: string, activeTenantId: string | null, meta: RequestMeta, mfaVerified = false): Promise<string> {
     const token = generateToken();
     await this.db.platform((tx) =>
       tx.insert(sessions).values({
@@ -32,6 +32,7 @@ export class SessionService {
         ip: meta.ip,
         userAgent: meta.userAgent,
         idleExpiresAt: this.idleExpiry(),
+        mfaVerified,
         absoluteExpiresAt: new Date(Date.now() + this.config.SESSION_ABSOLUTE_DAYS * 86400_000),
       }),
     );
