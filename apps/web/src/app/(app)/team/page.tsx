@@ -9,12 +9,15 @@ import {
   Alert, Badge, Button, Card, EmptyState, ErrorState, Field, Input, LoadingState, Modal, NoPermission, PageHeader, Select,
   formatDate,
 } from '@/components/ui';
+import { useConfirm, useToast } from '@/components/feedback';
 import { api } from '@/lib/api';
 import { formObject, validate, type FieldErrors } from '@/lib/forms';
 import type { MessageKey } from '@/lib/i18n';
 import { useCan, useI18n, useInvalidate, useMe } from '@/lib/providers';
 
 export default function TeamPage() {
+  const confirm = useConfirm();
+  const toast = useToast();
   const { t, err, locale } = useI18n();
   const can = useCan();
   const me = useMe();
@@ -30,6 +33,7 @@ export default function TeamPage() {
     mutationFn: (body: object) => api<InvitationDto>('/team/invitations', { method: 'POST', body }),
     onSuccess: (inv) => {
       setInviteOpen(false);
+      toast(t('toast.inviteSent'));
       setNotice(t('team.inviteSent', { email: inv.email }));
       invalidate('invitations');
       invalidate('audit');
@@ -41,7 +45,10 @@ export default function TeamPage() {
   });
   const update = useMutation({
     mutationFn: ({ id, body }: { id: string; body: object }) => api<MemberDto>(`/team/members/${id}`, { method: 'PATCH', body }),
-    onSuccess: () => invalidate('members'),
+    onSuccess: () => {
+      toast(t('common.saveSuccess'));
+      invalidate('members');
+    },
   });
 
   if (!me.data) return null;
@@ -65,7 +72,7 @@ export default function TeamPage() {
         title={t('team.title')}
         actions={
           can('team.member.invite') && (
-            <Button onClick={() => { invite.reset(); setErrors({}); setInviteOpen(true); }}>{t('team.invite')}</Button>
+            <Button icon="plus" onClick={() => { invite.reset(); setErrors({}); setInviteOpen(true); }}>{t('team.invite')}</Button>
           )
         }
       />
@@ -74,13 +81,13 @@ export default function TeamPage() {
         {update.error && <Alert tone="error">{err(update.error)}</Alert>}
 
         <Card>
-          <h2 className="border-b border-ink-100 px-5 py-3 font-medium">{t('team.members')}</h2>
+          <h2 className="border-b border-line-soft px-5 py-3 font-medium">{t('team.members')}</h2>
           {members.isLoading ? (
             <LoadingState />
           ) : members.error ? (
             <div className="p-4"><ErrorState error={members.error} onRetry={() => members.refetch()} /></div>
           ) : (
-            <ul className="divide-y divide-ink-100">
+            <ul className="stagger divide-y divide-line-soft">
               {members.data!.map((m) => {
                 const isSelf = m.userId === me.data!.user.id;
                 const manageable = can('team.member.update') && !isSelf && canAssignRole(myRole, m.role);
@@ -88,10 +95,10 @@ export default function TeamPage() {
                   <li key={m.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">
-                        {m.fullName} {isSelf && <span className="text-sm font-normal text-ink-500">{t('team.you')}</span>}
+                        {m.fullName} {isSelf && <span className="text-sm font-normal text-fg-muted">{t('team.you')}</span>}
                       </p>
-                      <p className="truncate text-sm text-ink-500"><bdi>{m.email}</bdi></p>
-                      {m.title && <p className="text-sm text-ink-500">{m.title}</p>}
+                      <p className="truncate text-sm text-fg-muted"><bdi>{m.email}</bdi></p>
+                      {m.title && <p className="text-sm text-fg-muted">{m.title}</p>}
                     </div>
                     {m.status === 'disabled' && <Badge tone="muted">{t('status.disabled')}</Badge>}
                     {manageable ? (
@@ -109,8 +116,8 @@ export default function TeamPage() {
                         <Button
                           variant={m.status === 'active' ? 'danger' : 'secondary'}
                           disabled={update.isPending}
-                          onClick={() => {
-                            if (m.status === 'active' && !window.confirm(t('team.confirmDisable', { name: m.fullName }))) return;
+                          onClick={async () => {
+                            if (m.status === 'active' && !(await confirm({ title: t('team.confirmDisable', { name: m.fullName }), tone: 'danger', confirmLabel: t('team.disable') }))) return;
                             update.mutate({ id: m.id, body: { status: m.status === 'active' ? 'disabled' : 'active' } });
                           }}
                         >
@@ -128,20 +135,20 @@ export default function TeamPage() {
         </Card>
 
         <Card>
-          <h2 className="border-b border-ink-100 px-5 py-3 font-medium">{t('team.pending')}</h2>
+          <h2 className="border-b border-line-soft px-5 py-3 font-medium">{t('team.pending')}</h2>
           {invites.isLoading ? (
             <LoadingState />
           ) : invites.error ? (
             <div className="p-4"><ErrorState error={invites.error} onRetry={() => invites.refetch()} /></div>
           ) : invites.data!.length === 0 ? (
-            <EmptyState>{t('team.noPending')}</EmptyState>
+            <EmptyState icon="inbox">{t('team.noPending')}</EmptyState>
           ) : (
-            <ul className="divide-y divide-ink-100">
+            <ul className="stagger divide-y divide-line-soft">
               {invites.data!.map((i) => (
                 <li key={i.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium"><bdi>{i.email}</bdi></p>
-                    <p className="text-sm text-ink-500">
+                    <p className="text-sm text-fg-muted">
                       {roleLabel(i.role)} · {t('team.expires', { date: formatDate(i.expiresAt, locale) })}
                     </p>
                   </div>

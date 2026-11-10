@@ -84,8 +84,9 @@ async function checkPage(page, name) {
   await rep.waitForURL('**/home');
   await rep.getByText('دورك في شركة انجزني التجريبية: مندوب مبيعات').waitFor();
   await checkPage(rep, 'home rep (360px)');
-  await rep.getByRole('button', { name: 'menu' }).click();
-  const repNav = await rep.locator('#mobile-nav nav a').allInnerTexts();
+  await rep.getByRole('button', { name: 'القائمة الرئيسية' }).click();
+  await rep.locator('#mobile-drawer nav').waitFor();
+  const repNav = (await rep.locator('#mobile-drawer nav a').allInnerTexts()).map((x) => x.trim());
   log('rep navigation:', JSON.stringify(repNav));
   if (repNav.includes('فريق العمل') || repNav.includes('سجل التدقيق')) throw new Error('rep sees admin navigation');
   await rep.screenshot({ path: `${OUT}/04-home-rep-mobile.png`, fullPage: true });

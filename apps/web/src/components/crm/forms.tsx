@@ -111,7 +111,7 @@ export function MoveStageForm({
   return (
     <form onSubmit={submit} noValidate className="space-y-4">
       {m.error && <Alert tone="error">{err(m.error)}</Alert>}
-      <p className="text-sm text-ink-500">{opportunity.accountName} — {opportunity.title}</p>
+      <p className="text-sm text-fg-muted">{opportunity.accountName} — {opportunity.title}</p>
       <Field label={t('opps.moveTo')} htmlFor="mv-stage">
         <Select id="mv-stage" value={stageId} onChange={(e) => setStageId(e.target.value)}>
           {pipeline.stages.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -291,7 +291,7 @@ export function ContactForm({ accountId, contact, onDone, onCancel }: { accountI
           {t('contacts.primary')}
         </label>
       </div>
-      <p className="text-xs text-ink-500">{t('contacts.encrypted')}</p>
+      <p className="text-xs text-fg-muted">{t('contacts.encrypted')}</p>
       <Actions onCancel={onCancel} pending={m.isPending} />
     </form>
   );

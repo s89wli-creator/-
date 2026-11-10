@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tenantSettingsSchema, type TenantDto } from '@rakan/shared';
 import { useState, type FormEvent } from 'react';
+import { useToast } from '@/components/feedback';
 import { Alert, Button, Card, ErrorState, Field, Input, LoadingState, NoPermission, PageHeader, Select } from '@/components/ui';
 import { api } from '@/lib/api';
 import { validate, type FieldErrors } from '@/lib/forms';
@@ -14,18 +15,20 @@ export default function CompanySettingsPage() {
   const { t, err } = useI18n();
   const can = useCan();
   const qc = useQueryClient();
+  const toast = useToast();
   const [errors, setErrors] = useState<FieldErrors>({});
   const tenant = useQuery({ queryKey: ['tenant'], queryFn: () => api<TenantDto>('/tenant'), enabled: can('tenant.settings.read') });
   const save = useMutation({
     mutationFn: (body: object) => api<TenantDto>('/tenant', { method: 'PATCH', body }),
     onSuccess: (data) => {
       qc.setQueryData(['tenant'], data);
+      toast(t('common.saveSuccess'));
       void qc.invalidateQueries({ queryKey: ['me'] });
     },
   });
 
   if (!can('tenant.settings.read')) return <NoPermission />;
-  if (tenant.isLoading) return <LoadingState />;
+  if (tenant.isLoading) return <LoadingState card />;
   if (tenant.error) return <ErrorState error={tenant.error} onRetry={() => tenant.refetch()} />;
   const d = tenant.data!;
   const editable = can('tenant.settings.update');
@@ -62,7 +65,6 @@ export default function CompanySettingsPage() {
         <form onSubmit={submit} noValidate className="space-y-5">
           {!editable && <Alert tone="info">{t('company.readOnly')}</Alert>}
           {save.error && <Alert tone="error">{err(save.error)}</Alert>}
-          {save.isSuccess && <Alert tone="success">{t('common.saved')}</Alert>}
           <fieldset disabled={!editable || save.isPending} className="grid gap-5 sm:grid-cols-2">
             <Field label={t('company.name')} htmlFor="name" error={fe('name')}>
               <Input id="name" name="name" defaultValue={d.name} aria-invalid={!!errors.name} />

@@ -3,7 +3,8 @@
 import { useQuery } from '@tanstack/react-query';
 import type { DashboardDto } from '@rakan/shared';
 import { useState } from 'react';
-import { Card, EmptyState, ErrorState, LoadingState, NoPermission, PageHeader, Select, formatMoney, formatPercent } from '@/components/ui';
+import { Icon, type IconName } from '@/components/icons';
+import { AnimatedNumber, Card, EmptyState, ErrorState, NoPermission, PageHeader, SectionTitle, Select, Skeleton, formatMoney } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useCrmSettings } from '@/lib/crm';
 import type { MessageKey } from '@/lib/i18n';
@@ -23,13 +24,42 @@ function range(p: Period): { from: string; to: string } {
   return { from: new Date(now.getTime() - days * 86400_000).toISOString(), to: new Date(now.getTime() + 60_000).toISOString() };
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Stat({ label, value, format, hint, icon, emphasis }: { label: string; value: number | null; format: (n: number) => string; hint?: string; icon: IconName; emphasis?: boolean }) {
   return (
-    <Card className="p-4">
-      <p className="text-xs text-ink-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
-      {hint && <p className="mt-0.5 text-xs text-ink-400">{hint}</p>}
+    <Card className="p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm text-fg-muted">{label}</p>
+        <span className={`grid size-8 place-items-center rounded-lg ${emphasis ? 'bg-brand-50 text-brand-700' : 'bg-subtle-strong text-fg-muted'}`}>
+          <Icon name={icon} size={16} />
+        </span>
+      </div>
+      <p className="mt-2 text-3xl font-semibold">{value === null ? '—' : <AnimatedNumber value={value} format={format} />}</p>
+      {hint && <p className="mt-1 text-xs text-fg-muted">{hint}</p>}
     </Card>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6" aria-hidden>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {Array.from({ length: 8 }, (_, i) => (
+          <Card key={i} className="space-y-3 p-5">
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-7 w-2/3" />
+            <Skeleton className="h-3 w-1/3" />
+          </Card>
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {[0, 1].map((i) => (
+          <Card key={i} className="space-y-4 p-5">
+            <Skeleton className="h-4 w-1/3" />
+            {Array.from({ length: 5 }, (_, j) => <Skeleton key={j} className="h-2 w-full" />)}
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -38,10 +68,10 @@ function Bar({ label, value, max, detail }: { label: string; value: number; max:
     <li className="space-y-1">
       <div className="flex justify-between gap-2 text-sm">
         <span>{label}</span>
-        <span className="text-ink-500 tabular-nums">{detail}</span>
+        <span className="text-fg-muted tabular-nums">{detail}</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-ink-100" aria-hidden>
-        <div className="h-full rounded-full bg-brand-500" style={{ width: `${max && value ? Math.max(2, (value / max) * 100) : 0}%` }} />
+      <div className="h-2 overflow-hidden rounded-full bg-subtle-strong" aria-hidden>
+        <div className="bar-grow h-full rounded-full bg-brand-600" style={{ width: `${max && value ? Math.max(2, (value / max) * 100) : 0}%` }} />
       </div>
     </li>
   );
@@ -81,43 +111,43 @@ export default function DashboardPage() {
           </div>
         }
       />
-      {q.isLoading ? <LoadingState /> : q.error ? <ErrorState error={q.error} onRetry={() => q.refetch()} /> : d && (
+      {q.isLoading ? <DashboardSkeleton /> : q.error ? <ErrorState error={q.error} onRetry={() => q.refetch()} /> : d && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label={t('dash.pipelineValue')} value={formatMoney(d.totals.pipelineValue, locale)} hint={`${t('dash.open')}: ${n(d.totals.openOpportunities)}`} />
-            <Stat label={t('dash.won')} value={n(d.totals.won)} hint={formatMoney(d.totals.wonValue, locale)} />
-            <Stat label={t('dash.winRate')} value={formatPercent(d.totals.winRate)} hint={`${t('dash.lost')}: ${n(d.totals.lost)}`} />
-            <Stat label={t('dash.proposals')} value={n(d.totals.proposalsSent)} />
-            <Stat label={t('dash.visitsCompleted')} value={n(d.totals.visitsCompleted)} hint={`${t('dash.visitsScheduled')}: ${n(d.totals.visitsScheduled)}`} />
-            <Stat label={t('dash.visitRate')} value={formatPercent(d.totals.visitCompletionRate)} />
-            <Stat label={t('dash.followRate')} value={formatPercent(d.totals.followUpCompletionRate)} hint={`${t('dash.overdue')}: ${n(d.totals.overdueTasks)}`} />
-            <Stat label={t('dash.accounts')} value={n(d.totals.accounts)} hint={`${t('dash.newAccounts')}: ${n(d.totals.newAccounts)} · ${t('dash.qualified')}: ${n(d.totals.qualified)}`} />
+          <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <Stat icon="chart" emphasis label={t('dash.pipelineValue')} value={d.totals.pipelineValue} format={(v) => formatMoney(v, locale)} hint={`${t('dash.open')}: ${n(d.totals.openOpportunities)}`} />
+            <Stat icon="checkCircle" emphasis label={t('dash.won')} value={d.totals.won} format={n} hint={formatMoney(d.totals.wonValue, locale)} />
+            <Stat icon="sparkle" label={t('dash.winRate')} value={d.totals.winRate === null ? null : Math.round(d.totals.winRate * 100)} format={(v) => `${v}%`} hint={`${t('dash.lost')}: ${n(d.totals.lost)}`} />
+            <Stat icon="upload" label={t('dash.proposals')} value={d.totals.proposalsSent} format={n} />
+            <Stat icon="pin" label={t('dash.visitsCompleted')} value={d.totals.visitsCompleted} format={n} hint={`${t('dash.visitsScheduled')}: ${n(d.totals.visitsScheduled)}`} />
+            <Stat icon="calendar" label={t('dash.visitRate')} value={d.totals.visitCompletionRate === null ? null : Math.round(d.totals.visitCompletionRate * 100)} format={(v) => `${v}%`} />
+            <Stat icon="checkSquare" label={t('dash.followRate')} value={d.totals.followUpCompletionRate === null ? null : Math.round(d.totals.followUpCompletionRate * 100)} format={(v) => `${v}%`} hint={`${t('dash.overdue')}: ${n(d.totals.overdueTasks)}`} />
+            <Stat icon="building" label={t('dash.accounts')} value={d.totals.accounts} format={n} hint={`${t('dash.newAccounts')}: ${n(d.totals.newAccounts)} · ${t('dash.qualified')}: ${n(d.totals.qualified)}`} />
           </div>
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="p-5">
-              <h2 className="mb-4 font-semibold">{t('dash.funnel')}</h2>
-              <ul className="space-y-3">
+            <Card>
+              <SectionTitle>{t('dash.funnel')}</SectionTitle>
+              <ul className="space-y-3 p-5">
                 {d.stageFunnel.map((s) => (
                   <Bar key={s.stageId} label={s.name} value={s.count} max={Math.max(...d.stageFunnel.map((x) => x.count))} detail={`${n(s.count)} · ${formatMoney(s.value, locale)}`} />
                 ))}
               </ul>
             </Card>
-            <Card className="p-5">
-              <h2 className="mb-4 font-semibold">{t('dash.lossReasons')}</h2>
+            <Card>
+              <SectionTitle>{t('dash.lossReasons')}</SectionTitle>
               {d.lossReasons.length ? (
-                <ul className="space-y-3">
+                <ul className="space-y-3 p-5">
                   {d.lossReasons.map((l) => <Bar key={l.label} label={l.label} value={l.count} max={d.lossReasons[0]!.count} detail={n(l.count)} />)}
                 </ul>
               ) : (
-                <EmptyState>{t('dash.noLosses')}</EmptyState>
+                <EmptyState icon="checkCircle">{t('dash.noLosses')}</EmptyState>
               )}
             </Card>
           </div>
           <Card>
-            <h2 className="border-b border-ink-100 px-5 py-3 font-semibold">{t('dash.byRep')}</h2>
+            <SectionTitle>{t('dash.byRep')}</SectionTitle>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-xs text-ink-500">
+                <thead className="text-xs text-fg-muted">
                   <tr>
                     <th scope="col" className="px-5 py-2 text-start font-medium">{t('dash.rep')}</th>
                     <th scope="col" className="px-3 py-2 text-end font-medium">{t('dash.visitsCompleted')}</th>
@@ -126,9 +156,9 @@ export default function DashboardPage() {
                     <th scope="col" className="px-5 py-2 text-end font-medium">{t('dash.openValue')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-ink-100">
+                <tbody className="divide-y divide-line-soft">
                   {d.byRep.map((r) => (
-                    <tr key={r.membershipId}>
+                    <tr key={r.membershipId} className="transition-colors duration-150 hover:bg-subtle">
                       <td className="px-5 py-2.5 font-medium">{r.name}</td>
                       <td className="px-3 py-2.5 text-end tabular-nums">{n(r.visitsCompleted)}</td>
                       <td className="px-3 py-2.5 text-end tabular-nums">{n(r.tasksDone)}</td>

@@ -4,7 +4,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { ACCOUNT_IMPORT_FIELDS, type ImportJobDto, type ImportRowDto } from '@rakan/shared';
 import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
-import { Alert, Badge, Button, Card, EmptyState, Field, LoadingState, NoPermission, PageHeader, Pagination, Select, Tabs } from '@/components/ui';
+import { Icon } from '@/components/icons';
+import { Alert, BackLink, Badge, Button, Card, EmptyState, Field, LoadingState, NoPermission, PageHeader, Pagination, Select, Tabs, cx } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import { useCrmSettings, useMembers } from '@/lib/crm';
 import type { MessageKey } from '@/lib/i18n';
@@ -26,10 +27,19 @@ function Steps({ current }: { current: number }) {
   const { t } = useI18n();
   const steps: MessageKey[] = ['import.step.upload', 'import.step.map', 'import.step.review', 'import.step.done'];
   return (
-    <ol className="mb-6 flex flex-wrap gap-2 text-sm">
+    <ol className="mb-8 grid grid-cols-4 gap-2" aria-label={t('import.title')}>
       {steps.map((s, i) => (
-        <li key={s} className={`flex items-center gap-2 rounded-full px-3 py-1 ${i === current ? 'bg-brand-600 text-white' : i < current ? 'bg-brand-50 text-brand-700' : 'bg-ink-100 text-ink-500'}`}>
-          <span className="font-semibold">{i + 1}</span> {t(s)}
+        <li key={s} aria-current={i === current ? 'step' : undefined} className="space-y-2">
+          <span className="block h-1 overflow-hidden rounded-full bg-subtle-strong">
+            <span
+              className="block h-full origin-right rounded-full bg-brand-600 transition-transform duration-500 ease-out ltr:origin-left"
+              style={{ transform: `scaleX(${i <= current ? 1 : 0})` }}
+            />
+          </span>
+          <span className={cx('flex items-center gap-1.5 text-xs sm:text-sm', i === current ? 'font-semibold text-brand-700' : i < current ? 'text-fg-sub' : 'text-fg-muted')}>
+            {i < current ? <Icon name="check" size={16} /> : <span className="tabular-nums">{i + 1}</span>}
+            <span className="truncate">{t(s)}</span>
+          </span>
         </li>
       ))}
     </ol>
@@ -48,6 +58,7 @@ export default function ImportPage() {
   const [filter, setFilter] = useState<Filter>('duplicates');
   const [page, setPage] = useState(1);
   const [permissionMissing, setPermissionMissing] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const up = useMutation({
     mutationFn: upload,
@@ -114,16 +125,36 @@ export default function ImportPage() {
 
   return (
     <>
-      <Link href="/accounts" className="text-sm text-brand-700 hover:underline">← {t('accounts.title')}</Link>
+      <BackLink href="/accounts">{t('accounts.title')}</BackLink>
       <PageHeader title={t('import.title')} subtitle={t('import.subtitle')} />
       <Steps current={step} />
 
       {step === 0 && (
         <Card className="space-y-4 p-5">
           {up.error && <Alert tone="error">{err(up.error)}</Alert>}
-          <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-ink-200 p-6 text-center hover:border-brand-500">
+          <label
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              const f = e.dataTransfer.files[0];
+              if (f) setFile(f);
+            }}
+            className={cx(
+              'flex min-h-44 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-6 text-center transition-[background-color,border-color,transform] duration-200',
+              'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-600',
+              dragOver ? 'scale-[1.01] border-brand-600 bg-brand-50' : file ? 'border-brand-600/50 bg-surface' : 'border-line-strong/60 bg-subtle hover:border-brand-600',
+            )}
+          >
+            <span className={cx('grid size-12 place-items-center rounded-full transition-colors', file ? 'bg-brand-50 text-brand-700' : 'bg-surface text-fg-muted')}>
+              <Icon name={file ? 'checkCircle' : 'upload'} />
+            </span>
             <span className="font-medium">{file ? file.name : t('import.choose')}</span>
-            <span className="text-xs text-ink-500">.xlsx · .csv</span>
+            <span className="text-xs text-fg-muted">.xlsx · .csv</span>
             <input type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
           <div className="flex justify-end">
@@ -138,11 +169,11 @@ export default function ImportPage() {
           {map.error && <Alert tone="error">{err(map.error)}</Alert>}
           {permissionMissing && <Alert tone="error">{t('errors.PERMISSION_NOT_CONFIRMED')}</Alert>}
           <Card>
-            <div className="grid grid-cols-2 gap-2 border-b border-ink-100 px-4 py-2 text-xs font-medium text-ink-500">
+            <div className="grid grid-cols-2 gap-2 border-b border-line-soft px-4 py-2 text-xs font-medium text-fg-muted">
               <span>{t('import.field')}</span>
               <span>{t('import.column')}</span>
             </div>
-            <ul className="divide-y divide-ink-100">
+            <ul className="stagger divide-y divide-line-soft">
               {fields.map((f) => (
                 <li key={f.key} className="grid grid-cols-2 items-center gap-2 px-4 py-2">
                   <label htmlFor={`map-${f.key}`} className="text-sm">{f.label}</label>
@@ -171,7 +202,7 @@ export default function ImportPage() {
               </Select>
             </Field>
           </Card>
-          <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <label className="flex items-start gap-3 rounded-xl border border-warn-line bg-warn-soft p-4 text-sm text-warn">
             <input type="checkbox" name="permission" aria-invalid={permissionMissing} className="mt-0.5 size-5 shrink-0 accent-brand-600" />
             {t('import.permission')}
           </label>
@@ -199,17 +230,17 @@ export default function ImportPage() {
           />
           <Card>
             {rows.isLoading ? <LoadingState /> : !rows.data?.items.length ? <EmptyState>—</EmptyState> : (
-              <ul className="divide-y divide-ink-100">
+              <ul className="stagger divide-y divide-line-soft">
                 {rows.data.items.map((r) => (
                   <li key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                    <span className="w-10 shrink-0 text-xs text-ink-400">#{r.rowNumber}</span>
+                    <span className="w-10 shrink-0 text-xs text-fg-muted">#{r.rowNumber}</span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{String(r.normalized?.name ?? r.raw[mapping.name ?? ''] ?? '—') || '—'}</p>
                       {r.duplicateReason && (
-                        <p className="text-sm text-amber-800">{t('import.matches', { name: r.duplicateOfName ?? '' })} · {reasonLabel(r.duplicateReason)}</p>
+                        <p className="text-sm text-warn">{t('import.matches', { name: r.duplicateOfName ?? '' })} · {reasonLabel(r.duplicateReason)}</p>
                       )}
                       {r.errors?.map((e) => (
-                        <p key={e.field + e.code} className={`text-xs ${e.code.startsWith('warning:') ? 'text-ink-500' : 'text-red-700'}`}>
+                        <p key={e.field + e.code} className={`text-xs ${e.code.startsWith('warning:') ? 'text-fg-muted' : 'text-danger'}`}>
                           {fieldLabel(e.field)}: {errLabel(e.code)}
                         </p>
                       ))}
@@ -245,7 +276,7 @@ export default function ImportPage() {
       {step === 3 && job && (
         <Card className="space-y-4 p-5">
           <Alert tone="success">{t('import.done', { created: job.stats.created ?? 0, merged: job.stats.merged ?? 0, skipped: job.stats.skipped ?? 0 })}</Alert>
-          <Link href="/accounts" className="inline-flex min-h-11 items-center rounded-lg bg-brand-600 px-4 text-sm font-medium text-white">{t('import.viewAccounts')}</Link>
+          <Link href="/accounts" className="inline-flex min-h-11 items-center rounded-lg bg-brand-600 px-4 text-sm font-medium text-on-brand">{t('import.viewAccounts')}</Link>
         </Card>
       )}
     </>

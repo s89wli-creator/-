@@ -5,8 +5,11 @@ import type { MeResponse, Permission } from '@rakan/shared';
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { api, ApiError } from './api';
 import { LOCALE_COOKIE, errorMessage, translate, type Locale, type MessageKey } from './i18n';
+import { THEME_COOKIE, type Theme } from './theme';
 
 interface I18nValue {
+  theme: Theme;
+  setTheme: (t: Theme) => void;
   locale: Locale;
   t: (key: MessageKey, vars?: Record<string, string | number>) => string;
   err: (e: unknown) => string;
@@ -14,7 +17,7 @@ interface I18nValue {
 }
 const I18nContext = createContext<I18nValue | null>(null);
 
-export function Providers({ locale: initial, children }: { locale: Locale; children: ReactNode }) {
+export function Providers({ locale: initial, theme: initialTheme, children }: { locale: Locale; theme: Theme; children: ReactNode }) {
   const [client] = useState(
     () =>
       new QueryClient({
@@ -27,6 +30,13 @@ export function Providers({ locale: initial, children }: { locale: Locale; child
       }),
   );
   const [locale, setLocaleState] = useState<Locale>(initial);
+  const [theme, setThemeState] = useState<Theme>(initialTheme);
+  const setTheme = useCallback((th: Theme) => {
+    document.cookie = `${THEME_COOKIE}=${th}; path=/; max-age=31536000; samesite=lax`;
+    if (th === 'system') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = th;
+    setThemeState(th);
+  }, []);
   const setLocale = useCallback((l: Locale) => {
     document.cookie = `${LOCALE_COOKIE}=${l}; path=/; max-age=31536000; samesite=lax`;
     document.documentElement.lang = l;
@@ -34,6 +44,8 @@ export function Providers({ locale: initial, children }: { locale: Locale; child
     setLocaleState(l);
   }, []);
   const value: I18nValue = {
+    theme,
+    setTheme,
     locale,
     setLocale,
     t: (key, vars) => translate(locale, key, vars),

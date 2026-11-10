@@ -12,5 +12,5 @@ export default function Index() {
     if (me.isSuccess) router.replace('/home');
     if (me.isError) router.replace('/login');
   }, [me.isSuccess, me.isError, router]);
-  return <LoadingState />;
+  return <LoadingState card />;
 }

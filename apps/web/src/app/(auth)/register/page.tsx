@@ -34,7 +34,7 @@ export default function RegisterPage() {
   return (
     <>
       <h1 className="text-xl font-semibold">{t('auth.register.title')}</h1>
-      <p className="mb-6 mt-1 text-sm text-ink-500">{t('auth.register.subtitle')}</p>
+      <p className="mb-6 mt-1 text-sm text-fg-muted">{t('auth.register.subtitle')}</p>
       <form onSubmit={submit} noValidate className="space-y-4">
         {m.error && <Alert tone="error">{err(m.error)}</Alert>}
         <Field label={t('auth.register.company')} htmlFor="companyName" error={fe('companyName')}>
@@ -51,7 +51,7 @@ export default function RegisterPage() {
         </Field>
         <Button type="submit" className="w-full" loading={m.isPending}>{t('auth.register.submit')}</Button>
       </form>
-      <p className="mt-6 text-center text-sm text-ink-500">
+      <p className="mt-6 text-center text-sm text-fg-muted">
         {t('auth.register.haveAccount')}{' '}
         <Link href="/login" className="font-medium text-brand-700 hover:underline">{t('auth.login.title')}</Link>
       </p>

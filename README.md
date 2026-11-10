@@ -9,6 +9,7 @@
 - **المرحلة 1 — Discovery:** ✅ معتمدة.
 - **المرحلة 2 — Foundation:** ✅ مكتملة — [التقرير](docs/09-phase-2-report.md).
 - **المرحلة 3 — Core CRM:** ✅ مكتملة — [التقرير](docs/10-phase-3-report.md).
+- **تجربة المستخدم:** ✅ نظام تصميم موحّد — [design-system/rakan/MASTER.md](design-system/rakan/MASTER.md).
 - **التالي:** المرحلة 4 — AI Intelligence (Sales Brain والوكلاء والموافقات).
 
 | الوثيقة | المحتوى |
@@ -76,7 +77,7 @@ pnpm test:isolation:app-layer   # عزل الشركات مع تعطيل RLS: ط�
 اختبارات المتصفح (تتطلب تشغيل الـAPI بـ`MAIL_TRANSPORT=log` والواجهة على قاعدة بيانات فارغة):
 
 ```bash
-pnpm e2e && pnpm e2e:crm
+pnpm e2e && pnpm e2e:crm && pnpm e2e:ux
 ```
 
 ## التقنيات

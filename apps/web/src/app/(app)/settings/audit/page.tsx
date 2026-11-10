@@ -46,9 +46,9 @@ function Diff({ before, after, memberName }: { before: unknown; after: unknown; 
     <dl className="mt-2 space-y-1 text-xs">
       {keys.map((k) => (
         <div key={k} className="flex flex-wrap items-baseline gap-x-2">
-          <dt className="font-medium text-ink-700">{auditFieldLabel(locale, k)}:</dt>
-          {k in b && <dd className="text-red-700 line-through"><bdi>{fmt(k, b[k])}</bdi></dd>}
-          {k in b && k in a && <dd aria-hidden className="text-ink-400">←</dd>}
+          <dt className="font-medium text-fg-sub">{auditFieldLabel(locale, k)}:</dt>
+          {k in b && <dd className="text-danger line-through"><bdi>{fmt(k, b[k])}</bdi></dd>}
+          {k in b && k in a && <dd aria-hidden className="text-fg-muted">←</dd>}
           {k in a && <dd className="text-brand-700"><bdi>{fmt(k, a[k])}</bdi></dd>}
         </div>
       ))}
@@ -98,14 +98,14 @@ export default function AuditPage() {
         ) : items.length === 0 ? (
           <EmptyState>{t('audit.empty')}</EmptyState>
         ) : (
-          <ol className="divide-y divide-ink-100">
+          <ol className="stagger divide-y divide-line-soft">
             {items.map((i) => (
               <li key={i.id} className="px-5 py-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="font-medium">{auditActionLabel(locale, i.action)}</p>
-                  <time className="text-xs text-ink-500" dateTime={i.createdAt}>{formatDate(i.createdAt, locale, true)}</time>
+                  <time className="text-xs text-fg-muted" dateTime={i.createdAt}>{formatDate(i.createdAt, locale, true)}</time>
                 </div>
-                <p className="text-sm text-ink-500">
+                <p className="text-sm text-fg-muted">
                   {i.actorName ?? t('audit.system')}
                   {i.ip && (
                     <span className="text-xs"> · <bdi>{i.ip}</bdi></span>
@@ -117,7 +117,7 @@ export default function AuditPage() {
           </ol>
         )}
         {q.hasNextPage && (
-          <div className="border-t border-ink-100 p-4 text-center">
+          <div className="border-t border-line-soft p-4 text-center">
             <Button variant="secondary" loading={q.isFetchingNextPage} onClick={() => q.fetchNextPage()}>{t('audit.loadMore')}</Button>
           </div>
         )}

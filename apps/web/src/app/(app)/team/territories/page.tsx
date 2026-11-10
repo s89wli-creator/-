@@ -6,6 +6,7 @@ import { useState, type FormEvent } from 'react';
 import {
   Alert, Badge, Button, Card, EmptyState, ErrorState, Field, Input, LoadingState, Modal, NoPermission, PageHeader,
 } from '@/components/ui';
+import { useConfirm, useToast } from '@/components/feedback';
 import { api } from '@/lib/api';
 import { validate, type FieldErrors } from '@/lib/forms';
 import { useCan, useI18n, useInvalidate } from '@/lib/providers';
@@ -13,6 +14,8 @@ import { useCan, useI18n, useInvalidate } from '@/lib/providers';
 type Editing = { mode: 'create' } | { mode: 'edit'; territory: TerritoryDto };
 
 export default function TerritoriesPage() {
+  const confirm = useConfirm();
+  const toast = useToast();
   const { t, err } = useI18n();
   const can = useCan();
   const invalidate = useInvalidate();
@@ -34,12 +37,16 @@ export default function TerritoriesPage() {
     },
     onSuccess: () => {
       setEditing(null);
+      toast(t('common.saveSuccess'));
       invalidate('territories');
     },
   });
   const remove = useMutation({
     mutationFn: (id: string) => api(`/team/territories/${id}`, { method: 'DELETE' }),
-    onSuccess: () => invalidate('territories'),
+    onSuccess: () => {
+      toast(t('common.deleted'));
+      invalidate('territories');
+    },
   });
 
   if (!can('team.territory.read')) return <NoPermission />;
@@ -85,9 +92,9 @@ export default function TerritoriesPage() {
       ) : list.error ? (
         <ErrorState error={list.error} onRetry={() => list.refetch()} />
       ) : list.data!.length === 0 ? (
-        <Card><EmptyState>{t('territories.empty')}</EmptyState></Card>
+        <Card><EmptyState icon="map">{t('territories.empty')}</EmptyState></Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="stagger grid gap-4 md:grid-cols-2">
           {list.data!.map((tr) => (
             <Card key={tr.id} className="flex flex-col p-5">
               <div className="flex items-start justify-between gap-2">
@@ -99,8 +106,8 @@ export default function TerritoriesPage() {
                     </Button>
                     <Button
                       variant="ghost"
-                      className="min-h-9 px-3 text-red-700"
-                      onClick={() => window.confirm(t('territories.confirmDelete', { name: tr.name })) && remove.mutate(tr.id)}
+                      className="min-h-9 px-3 text-danger"
+                      onClick={() => void confirm({ title: t('territories.confirmDelete', { name: tr.name }), tone: 'danger', confirmLabel: t('common.delete') }).then((ok) => ok && remove.mutate(tr.id))}
                     >
                       {t('common.delete')}
                     </Button>
@@ -110,10 +117,10 @@ export default function TerritoriesPage() {
               {tr.regions.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">{tr.regions.map((r) => <Badge key={r}>{r}</Badge>)}</div>
               )}
-              {tr.cities.length > 0 && <p className="mt-2 text-sm text-ink-500">{tr.cities.join('، ')}</p>}
+              {tr.cities.length > 0 && <p className="mt-2 text-sm text-fg-muted">{tr.cities.join('، ')}</p>}
               {can('team.member.read') && (
-                <p className="mt-3 border-t border-ink-100 pt-3 text-sm text-ink-700">
-                  <span className="text-ink-500">{t('territories.members')}: </span>
+                <p className="mt-3 border-t border-line-soft pt-3 text-sm text-fg-sub">
+                  <span className="text-fg-muted">{t('territories.members')}: </span>
                   {tr.memberIds.length ? tr.memberIds.map((id) => memberName(id) ?? '—').join('، ') : '—'}
                 </p>
               )}
@@ -129,8 +136,8 @@ export default function TerritoriesPage() {
             <Input id="tr-name" name="name" defaultValue={current?.name} autoFocus aria-invalid={!!errors.name} />
           </Field>
           <fieldset>
-            <legend className="mb-2 text-sm font-medium text-ink-700">{t('territories.regions')}</legend>
-            <div className="grid max-h-48 grid-cols-2 gap-x-3 gap-y-1 overflow-y-auto rounded-lg border border-ink-200 p-3">
+            <legend className="mb-2 text-sm font-medium text-fg-sub">{t('territories.regions')}</legend>
+            <div className="grid max-h-48 grid-cols-2 gap-x-3 gap-y-1 overflow-y-auto rounded-lg border border-line p-3">
               {SAUDI_REGIONS.map((r) => (
                 <label key={r} className="flex min-h-9 items-center gap-2 text-sm">
                   <input type="checkbox" name="regions" value={r} defaultChecked={current?.regions.includes(r)} className="size-4 accent-brand-600" />
@@ -144,8 +151,8 @@ export default function TerritoriesPage() {
           </Field>
           {showMemberPicker && assignableMembers.length > 0 && (
             <fieldset>
-              <legend className="mb-2 text-sm font-medium text-ink-700">{t('territories.members')}</legend>
-              <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-ink-200 p-3">
+              <legend className="mb-2 text-sm font-medium text-fg-sub">{t('territories.members')}</legend>
+              <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-line p-3">
                 {assignableMembers.map((m) => (
                   <label key={m.id} className="flex min-h-9 items-center gap-2 text-sm">
                     <input type="checkbox" name="members" value={m.id} defaultChecked={current?.memberIds.includes(m.id)} className="size-4 accent-brand-600" />

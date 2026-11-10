@@ -6,8 +6,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { AccountForm } from '@/components/crm/AccountForm';
+import { Icon } from '@/components/icons';
 import {
-  Badge, Button, Card, EmptyState, ErrorState, Input, LoadingState, Modal, NoPermission, PageHeader, Pagination, Select, formatDate,
+  Badge, Button, ButtonLink, Card, EmptyState, ErrorState, Input, LoadingState, Modal, NoPermission, PageHeader, Pagination, Select, formatDate,
 } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useCrmSettings, useMembers } from '@/lib/crm';
@@ -61,21 +62,22 @@ export default function AccountsPage() {
         subtitle={t('accounts.subtitle')}
         actions={
           <div className="flex flex-wrap gap-2">
-            {can('crm.import') && <Link href="/accounts/import" className="inline-flex min-h-11 items-center rounded-lg border border-ink-200 bg-white px-4 text-sm font-medium hover:bg-ink-50">{t('common.import')}</Link>}
+            {can('crm.import') && <ButtonLink href="/accounts/import" icon="upload">{t('common.import')}</ButtonLink>}
             {can('crm.export') && (
-              <a href={`/api/crm/accounts/export?format=xlsx&${exportParams}`} className="inline-flex min-h-11 items-center rounded-lg border border-ink-200 bg-white px-4 text-sm font-medium hover:bg-ink-50" download>
-                {t('common.export')}
-              </a>
+              <ButtonLink href={`/api/crm/accounts/export?format=xlsx&${exportParams}`} icon="download" download>{t('common.export')}</ButtonLink>
             )}
-            {can('crm.account.write') && <Button onClick={() => setCreating(true)}>{t('accounts.new')}</Button>}
+            {can('crm.account.write') && <Button icon="plus" onClick={() => setCreating(true)}>{t('accounts.new')}</Button>}
           </div>
         }
       />
       <Card>
-        <div className="grid gap-3 border-b border-ink-100 p-4 sm:grid-cols-4">
+        <div className="grid gap-3 border-b border-line-soft p-4 sm:grid-cols-4">
           <div className="sm:col-span-4 lg:col-span-1">
             <label htmlFor="acc-q" className="sr-only">{t('common.search')}</label>
-            <Input id="acc-q" type="search" placeholder={t('accounts.searchPlaceholder')} value={q} onChange={(e) => setQ(e.target.value)} />
+            <div className="relative">
+              <Icon name="search" size={16} className="pointer-events-none absolute inset-y-0 start-3 my-auto text-fg-muted" />
+              <Input id="acc-q" type="search" className="ps-9" placeholder={t('accounts.searchPlaceholder')} value={q} onChange={(e) => setQ(e.target.value)} />
+            </div>
           </div>
           {!!settings.data?.tracks.length && (
             <Select aria-label={t('accounts.track')} value={filters.trackId} onChange={(e) => setFilter('trackId', e.target.value)}>
@@ -101,23 +103,39 @@ export default function AccountsPage() {
         ) : list.error ? (
           <div className="p-4"><ErrorState error={list.error} onRetry={() => list.refetch()} /></div>
         ) : list.data!.items.length === 0 ? (
-          <EmptyState>{debounced || Object.values(filters).some(Boolean) ? t('accounts.noMatch') : t('accounts.empty')}</EmptyState>
+          debounced || Object.values(filters).some(Boolean) ? (
+            <EmptyState icon="search">{t('accounts.noMatch')}</EmptyState>
+          ) : (
+            <EmptyState
+              icon="building"
+              action={
+                <div className="flex flex-wrap justify-center gap-2">
+                  {can('crm.account.write') && <Button icon="plus" onClick={() => setCreating(true)}>{t('accounts.new')}</Button>}
+                  {can('crm.import') && <ButtonLink href="/accounts/import" icon="upload">{t('common.import')}</ButtonLink>}
+                </div>
+              }
+            >
+              {t('accounts.empty')}
+            </EmptyState>
+          )
         ) : (
           <>
-            <p className="px-4 pt-3 text-xs text-ink-500">{t('common.resultsCount', { count: list.data!.total })}</p>
-            <ul className="divide-y divide-ink-100">
+            <p className="px-4 pt-3 text-xs text-fg-muted">{t('common.resultsCount', { count: list.data!.total })}</p>
+            <ul className="stagger divide-y divide-line-soft">
               {list.data!.items.map((a) => (
                 <li key={a.id}>
-                  <Link href={`/accounts/${a.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-ink-50">
+                  <Link href={`/accounts/${a.id}`} className="group flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3.5 transition-colors duration-150 hover:bg-subtle">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-brand-50 text-sm font-semibold text-brand-700" aria-hidden>{a.name.trim()[0]}</span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{a.name}</p>
-                      <p className="truncate text-sm text-ink-500">
+                      <p className="truncate text-sm text-fg-muted">
                         {[a.city, trackName(a.trackId), a.ownerName ?? t('common.unassigned')].filter(Boolean).join(' · ')}
                       </p>
                     </div>
                     {a.status !== 'active' && <Badge tone={a.status === 'customer' ? 'brand' : 'muted'}>{t(`accounts.status.${a.status}` as MessageKey)}</Badge>}
                     {!!a.openOpportunities && <Badge>{t('accounts.openOpps')}: {a.openOpportunities}</Badge>}
-                    {a.lastActivityAt && <span className="text-xs text-ink-400">{formatDate(a.lastActivityAt, locale)}</span>}
+                    {a.lastActivityAt && <span className="text-xs text-fg-muted">{formatDate(a.lastActivityAt, locale)}</span>}
+                    <Icon name="chevronEnd" size={16} className="text-fg-muted transition-transform duration-150 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
                   </Link>
                 </li>
               ))}

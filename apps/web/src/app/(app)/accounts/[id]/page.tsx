@@ -13,6 +13,7 @@ import {
   Alert, Badge, Button, Card, EmptyState, ErrorState, Field, Input, LoadingState, Modal, Tabs, Textarea,
   formatDate, formatMoney,
 } from '@/components/ui';
+import { useConfirm, useToast } from '@/components/feedback';
 import { api, ApiError } from '@/lib/api';
 import { useCrmSettings } from '@/lib/crm';
 import type { MessageKey } from '@/lib/i18n';
@@ -21,6 +22,8 @@ import { useCan, useI18n, useInvalidate, useMe } from '@/lib/providers';
 type Tab = 'overview' | 'contacts' | 'opportunities' | 'visits' | 'tasks' | 'notes' | 'timeline';
 
 export default function AccountPage() {
+  const confirm = useConfirm();
+  const toast = useToast();
   const { id } = useParams<{ id: string }>();
   const { t, err, locale } = useI18n();
   const can = useCan();
@@ -48,19 +51,35 @@ export default function AccountPage() {
   const remove = useMutation({ mutationFn: () => api(`/crm/accounts/${id}`, { method: 'DELETE' }), onSuccess: () => router.replace('/accounts') });
   const addNote = useMutation({
     mutationFn: (body: string) => api(`/crm/accounts/${id}/notes`, { method: 'POST', body: { body } }),
-    onSuccess: () => refresh('notes'),
+    onSuccess: () => {
+      toast(t('toast.noteAdded'));
+      refresh('notes');
+    },
   });
-  const deleteContact = useMutation({ mutationFn: (cid: string) => api(`/crm/contacts/${cid}`, { method: 'DELETE' }), onSuccess: () => refresh('contacts') });
+  const deleteContact = useMutation({
+    mutationFn: (cid: string) => api(`/crm/contacts/${cid}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      toast(t('common.deleted'));
+      refresh('contacts');
+    },
+  });
   const setDnc = useMutation({
     mutationFn: ({ cid, on, reason }: { cid: string; on: boolean; reason?: string }) => api(`/crm/contacts/${cid}/dnc`, { method: 'PUT', body: { doNotContact: on, reason } }),
     onSuccess: () => {
       close();
+      toast(t('common.saveSuccess'));
       refresh('contacts');
     },
   });
-  const completeTask = useMutation({ mutationFn: (tid: string) => api(`/crm/tasks/${tid}`, { method: 'PATCH', body: { status: 'done' } }), onSuccess: () => refresh('tasks') });
+  const completeTask = useMutation({
+    mutationFn: (tid: string) => api(`/crm/tasks/${tid}`, { method: 'PATCH', body: { status: 'done' } }),
+    onSuccess: () => {
+      toast(t('toast.taskDone'));
+      refresh('tasks');
+    },
+  });
 
-  if (account.isLoading) return <LoadingState />;
+  if (account.isLoading) return <LoadingState card />;
   if (account.error) return account.error instanceof ApiError && account.error.status === 404 ? <Alert tone="error">{t('errors.NOT_FOUND')}</Alert> : <ErrorState error={account.error} onRetry={() => account.refetch()} />;
   const a = account.data!;
   // Reps may only change accounts assigned to them (the API enforces this too).
@@ -82,7 +101,7 @@ export default function AccountPage() {
 
   const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <div className="flex flex-wrap justify-between gap-2 py-2.5 text-sm">
-      <dt className="text-ink-500">{label}</dt>
+      <dt className="text-fg-muted">{label}</dt>
       <dd className="font-medium">{value || '—'}</dd>
     </div>
   );
@@ -94,7 +113,7 @@ export default function AccountPage() {
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">{a.name}</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-500">
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-fg-muted">
               <Badge tone={a.status === 'customer' ? 'brand' : a.status === 'active' ? 'neutral' : 'muted'}>{t(`accounts.status.${a.status}` as MessageKey)}</Badge>
               {track && <Badge>{track.name}</Badge>}
               <span>{a.ownerName ?? t('common.unassigned')}</span>
@@ -105,7 +124,7 @@ export default function AccountPage() {
             {can('crm.visit.write') && canWrite && <Button variant="secondary" onClick={() => setModal('visit')}>{t('visits.new')}</Button>}
             {canWrite && <Button variant="secondary" onClick={() => setModal('edit')}>{t('common.edit')}</Button>}
             {can('crm.account.delete') && (
-              <Button variant="danger" loading={remove.isPending} onClick={() => window.confirm(t('accounts.confirmDelete', { name: a.name })) && remove.mutate()}>
+              <Button variant="danger" loading={remove.isPending} onClick={() => void confirm({ title: t('accounts.confirmDelete', { name: a.name }), tone: 'danger', confirmLabel: t('common.delete') }).then((ok) => ok && remove.mutate())}>
                 {t('common.delete')}
               </Button>
             )}
@@ -121,7 +140,7 @@ export default function AccountPage() {
       {tab === 'overview' && (
         <div className="grid gap-4 lg:grid-cols-2">
           <Card className="px-5 py-2">
-            <dl className="divide-y divide-ink-100">
+            <dl className="divide-y divide-line-soft">
               <Row label={t('accounts.cr')} value={<bdi>{a.crNumber}</bdi>} />
               <Row label={t('accounts.vat')} value={<bdi>{a.vatNumber}</bdi>} />
               <Row label={t('accounts.phone')} value={a.phone && <a href={`tel:${a.phone}`} className="text-brand-700" dir="ltr">{a.phone}</a>} />
@@ -132,7 +151,7 @@ export default function AccountPage() {
             </dl>
           </Card>
           <Card className="px-5 py-2">
-            <dl className="divide-y divide-ink-100">
+            <dl className="divide-y divide-line-soft">
               <Row label={t('accounts.source')} value={`${t(`accounts.source.${a.leadSource}` as MessageKey)}${a.leadSourceDetail ? ` — ${a.leadSourceDetail}` : ''}`} />
               <Row label={t('accounts.lastActivity')} value={a.lastActivityAt && formatDate(a.lastActivityAt, locale, true)} />
               <Row label={t('accounts.openOpps')} value={String(opps.data?.filter((o) => o.stageCategory === 'open').length ?? '—')} />
@@ -147,22 +166,22 @@ export default function AccountPage() {
 
       {tab === 'contacts' && (
         <Card>
-          {canWrite && <div className="flex justify-end border-b border-ink-100 p-3"><Button onClick={() => setModal('contact')}>{t('contacts.new')}</Button></div>}
+          {canWrite && <div className="flex justify-end border-b border-line-soft p-3"><Button onClick={() => setModal('contact')}>{t('contacts.new')}</Button></div>}
           {contacts.data?.length ? (
-            <ul className="divide-y divide-ink-100">
+            <ul className="stagger divide-y divide-line-soft">
               {contacts.data.map((c) => (
                 <li key={c.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">
                       {c.fullName} {c.isPrimary && <Badge tone="brand">{t('contacts.primary')}</Badge>} {c.doNotContact && <Badge tone="warn">{t('contacts.dncBadge')}</Badge>}
                     </p>
-                    <p className="text-sm text-ink-500">{c.jobTitle}</p>
+                    <p className="text-sm text-fg-muted">{c.jobTitle}</p>
                     <p className="mt-1 flex flex-wrap gap-3 text-sm">
                       {c.phone && !c.doNotContact && <a className="text-brand-700" href={`tel:${c.phone}`} dir="ltr">{c.phone}</a>}
-                      {c.phone && c.doNotContact && <span className="text-ink-400" dir="ltr">{c.phone}</span>}
-                      {c.email && <bdi className="text-ink-700">{c.email}</bdi>}
+                      {c.phone && c.doNotContact && <span className="text-fg-muted" dir="ltr">{c.phone}</span>}
+                      {c.email && <bdi className="text-fg-sub">{c.email}</bdi>}
                     </p>
-                    {c.doNotContact && c.dncReason && <p className="mt-1 text-xs text-amber-800">{c.dncReason}</p>}
+                    {c.doNotContact && c.dncReason && <p className="mt-1 text-xs text-warn">{c.dncReason}</p>}
                   </div>
                   {canWrite && (
                     <div className="flex flex-wrap gap-1">
@@ -170,7 +189,7 @@ export default function AccountPage() {
                       <Button variant="ghost" onClick={() => (c.doNotContact ? setDnc.mutate({ cid: c.id, on: false }) : setModal({ dnc: c }))}>
                         {c.doNotContact ? t('contacts.dncOff') : t('contacts.dncOn')}
                       </Button>
-                      <Button variant="ghost" className="text-red-700" onClick={() => window.confirm(t('contacts.confirmDelete', { name: c.fullName })) && deleteContact.mutate(c.id)}>
+                      <Button variant="ghost" className="text-danger" onClick={() => void confirm({ title: t('contacts.confirmDelete', { name: c.fullName }), tone: 'danger', confirmLabel: t('common.delete') }).then((ok) => ok && deleteContact.mutate(c.id))}>
                         {t('common.delete')}
                       </Button>
                     </div>
@@ -186,14 +205,14 @@ export default function AccountPage() {
 
       {tab === 'opportunities' && (
         <Card>
-          {can('crm.opportunity.write') && canWrite && <div className="flex justify-end border-b border-ink-100 p-3"><Button onClick={() => setModal('opp')}>{t('opps.new')}</Button></div>}
+          {can('crm.opportunity.write') && canWrite && <div className="flex justify-end border-b border-line-soft p-3"><Button onClick={() => setModal('opp')}>{t('opps.new')}</Button></div>}
           {opps.data?.length ? (
-            <ul className="divide-y divide-ink-100">
+            <ul className="stagger divide-y divide-line-soft">
               {opps.data.map((o) => (
                 <li key={o.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{o.title}</p>
-                    <p className="text-sm text-ink-500">{formatMoney(o.amount, locale)} · {o.ownerName ?? t('common.unassigned')}</p>
+                    <p className="text-sm text-fg-muted">{formatMoney(o.amount, locale)} · {o.ownerName ?? t('common.unassigned')}</p>
                   </div>
                   <Badge tone={o.stageCategory === 'won' ? 'brand' : o.stageCategory === 'open' ? 'neutral' : 'muted'}>{stageName(o)}</Badge>
                   {can('crm.opportunity.write') && pipelineFor(o) && <Button variant="secondary" onClick={() => setModal({ move: o })}>{t('opps.moveTo')}</Button>}
@@ -209,13 +228,13 @@ export default function AccountPage() {
       {tab === 'visits' && (
         <Card>
           {visits.data?.length ? (
-            <ul className="divide-y divide-ink-100">
+            <ul className="stagger divide-y divide-line-soft">
               {visits.data.map((v) => (
                 <li key={v.id}>
-                  <Link href={`/visits/${v.id}`} className="flex flex-wrap items-center gap-3 px-5 py-4 hover:bg-ink-50">
+                  <Link href={`/visits/${v.id}`} className="flex flex-wrap items-center gap-3 px-5 py-4 transition-colors duration-150 hover:bg-subtle">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">{formatDate(v.scheduledStart, locale, true)}</p>
-                      <p className="text-sm text-ink-500">{[v.repName, v.purpose].filter(Boolean).join(' · ')}</p>
+                      <p className="text-sm text-fg-muted">{[v.repName, v.purpose].filter(Boolean).join(' · ')}</p>
                     </div>
                     <Badge tone={v.status === 'completed' ? 'brand' : v.status === 'cancelled' ? 'muted' : 'neutral'}>{t(`visits.status.${v.status}`)}</Badge>
                     {v.outcome && <Badge>{t(`visits.outcome.${v.outcome}` as MessageKey)}</Badge>}
@@ -231,14 +250,14 @@ export default function AccountPage() {
 
       {tab === 'tasks' && (
         <Card>
-          {can('crm.task.write') && <div className="flex justify-end border-b border-ink-100 p-3"><Button onClick={() => setModal('task')}>{t('tasks.new')}</Button></div>}
+          {can('crm.task.write') && <div className="flex justify-end border-b border-line-soft p-3"><Button onClick={() => setModal('task')}>{t('tasks.new')}</Button></div>}
           {tasks.data?.length ? (
-            <ul className="divide-y divide-ink-100">
+            <ul className="stagger divide-y divide-line-soft">
               {tasks.data.map((x) => (
                 <li key={x.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{x.title}</p>
-                    <p className="text-sm text-ink-500">{[t(`tasks.type.${x.type}` as MessageKey), x.assigneeName, x.dueAt && formatDate(x.dueAt, locale, true)].filter(Boolean).join(' · ')}</p>
+                    <p className="text-sm text-fg-muted">{[t(`tasks.type.${x.type}` as MessageKey), x.assigneeName, x.dueAt && formatDate(x.dueAt, locale, true)].filter(Boolean).join(' · ')}</p>
                   </div>
                   {x.dueAt && new Date(x.dueAt) < new Date() && <Badge tone="warn">{t('tasks.overdue')}</Badge>}
                   {can('crm.task.write') && <Button variant="secondary" loading={completeTask.isPending && completeTask.variables === x.id} onClick={() => completeTask.mutate(x.id)}>{t('tasks.markDone')}</Button>}
@@ -255,7 +274,7 @@ export default function AccountPage() {
         <Card>
           {canWrite && (
             <form
-              className="space-y-2 border-b border-ink-100 p-4"
+              className="space-y-2 border-b border-line-soft p-4"
               onSubmit={(e: FormEvent<HTMLFormElement>) => {
                 e.preventDefault();
                 const form = e.currentTarget;
@@ -269,11 +288,11 @@ export default function AccountPage() {
             </form>
           )}
           {notes.data?.length ? (
-            <ul className="divide-y divide-ink-100">
+            <ul className="stagger divide-y divide-line-soft">
               {notes.data.map((n) => (
                 <li key={n.id} className="px-5 py-4">
                   <p className="whitespace-pre-wrap text-sm">{n.body}</p>
-                  <p className="mt-1 text-xs text-ink-500">{n.authorName} · {formatDate(n.createdAt, locale, true)}</p>
+                  <p className="mt-1 text-xs text-fg-muted">{n.authorName} · {formatDate(n.createdAt, locale, true)}</p>
                 </li>
               ))}
             </ul>
@@ -286,13 +305,13 @@ export default function AccountPage() {
       {tab === 'timeline' && (
         <Card>
           {timeline.isLoading ? <LoadingState /> : timeline.data?.length ? (
-            <ol className="divide-y divide-ink-100">
+            <ol className="stagger divide-y divide-line-soft">
               {timeline.data.map((e) => (
                 <li key={e.id} className="flex gap-3 px-5 py-3">
-                  <span className={`mt-1.5 size-2 shrink-0 rounded-full ${e.actorType === 'system' ? 'bg-ink-400' : 'bg-brand-500'}`} aria-hidden />
+                  <span className={`mt-1.5 size-2 shrink-0 rounded-full ${e.actorType === 'system' ? 'bg-fg-muted' : 'bg-brand-600'}`} aria-hidden />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{t(`timeline.${e.type}` as MessageKey)}{e.summary ? `: ${e.summary}` : ''}</p>
-                    <p className="text-xs text-ink-500">{e.actorName ?? t('audit.system')} · {formatDate(e.occurredAt, locale, true)}</p>
+                    <p className="text-xs text-fg-muted">{e.actorName ?? t('audit.system')} · {formatDate(e.occurredAt, locale, true)}</p>
                   </div>
                 </li>
               ))}
@@ -304,23 +323,23 @@ export default function AccountPage() {
       )}
 
       <Modal open={modal === 'edit'} onClose={close} title={t('accounts.edit')} size="lg">
-        <AccountForm account={a} onCancel={close} onSaved={() => { close(); refresh(); }} />
+        <AccountForm account={a} onCancel={close} onSaved={() => { close(); toast(t('common.saveSuccess')); refresh(); }} />
       </Modal>
       <Modal open={modal === 'contact' || (!!modal && typeof modal === 'object' && 'contact' in modal)} onClose={close} title={t('contacts.new')} size="lg">
-        <ContactForm accountId={id} contact={modal && typeof modal === 'object' && 'contact' in modal ? modal.contact : undefined} onCancel={close} onDone={() => { close(); refresh('contacts'); }} />
+        <ContactForm accountId={id} contact={modal && typeof modal === 'object' && 'contact' in modal ? modal.contact : undefined} onCancel={close} onDone={() => { close(); toast(t('common.saveSuccess')); refresh('contacts'); }} />
       </Modal>
       <Modal open={modal === 'opp'} onClose={close} title={t('opps.new')}>
-        <OpportunityForm accountId={id} onCancel={close} onDone={() => { close(); refresh('opps'); }} />
+        <OpportunityForm accountId={id} onCancel={close} onDone={() => { close(); toast(t('toast.created')); refresh('opps'); }} />
       </Modal>
       <Modal open={modal === 'visit'} onClose={close} title={t('visits.new')} size="lg">
-        <VisitForm accountId={id} opportunities={opps.data} onCancel={close} onDone={() => { close(); refresh('visits', 'opps'); setTab('visits'); }} />
+        <VisitForm accountId={id} opportunities={opps.data} onCancel={close} onDone={() => { close(); toast(t('toast.created')); refresh('visits', 'opps'); setTab('visits'); }} />
       </Modal>
       <Modal open={modal === 'task'} onClose={close} title={t('tasks.new')}>
-        <TaskForm accountId={id} onCancel={close} onDone={() => { close(); refresh('tasks'); }} />
+        <TaskForm accountId={id} onCancel={close} onDone={() => { close(); toast(t('toast.created')); refresh('tasks'); }} />
       </Modal>
       <Modal open={!!modal && typeof modal === 'object' && 'move' in modal} onClose={close} title={t('opps.moveTo')}>
         {modal && typeof modal === 'object' && 'move' in modal && pipelineFor(modal.move) && (
-          <MoveStageForm opportunity={modal.move} pipeline={pipelineFor(modal.move)!} onCancel={close} onDone={() => { close(); refresh('opps'); }} />
+          <MoveStageForm opportunity={modal.move} pipeline={pipelineFor(modal.move)!} onCancel={close} onDone={(o) => { close(); toast(t('toast.stageMoved', { stage: stageName(o) })); refresh('opps'); }} />
         )}
       </Modal>
       <Modal open={!!modal && typeof modal === 'object' && 'dnc' in modal} onClose={close} title={t('contacts.dncOn')}>

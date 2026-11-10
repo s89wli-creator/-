@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
   return (
     <>
       <h1 className="text-xl font-semibold">{t('auth.forgot.title')}</h1>
-      <p className="mb-6 mt-1 text-sm text-ink-500">{t('auth.forgot.subtitle')}</p>
+      <p className="mb-6 mt-1 text-sm text-fg-muted">{t('auth.forgot.subtitle')}</p>
       {m.isSuccess ? (
         <Alert tone="success">{t('auth.forgot.sent')}</Alert>
       ) : (

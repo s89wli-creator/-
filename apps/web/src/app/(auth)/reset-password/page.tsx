@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
   return (
     <>
       <h1 className="mb-6 text-xl font-semibold">{t('auth.reset.title')}</h1>
-      <Suspense fallback={<LoadingState />}>
+      <Suspense fallback={<LoadingState rows={2} />}>
         <ResetForm />
       </Suspense>
       <p className="mt-6 text-center text-sm">

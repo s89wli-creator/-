@@ -17,7 +17,7 @@ export function CustomFieldInputs({ defs, values, trackId }: { defs: CustomField
   if (!visible.length) return null;
   return (
     <fieldset className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
-      <legend className="mb-2 text-sm font-medium text-ink-700">{t('accounts.customFields')}</legend>
+      <legend className="mb-2 text-sm font-medium text-fg-sub">{t('accounts.customFields')}</legend>
       {visible.map((d) => {
         const id = `cf-${d.key}`;
         const v = values[d.key];
@@ -104,7 +104,7 @@ export function AccountForm({ account, onSaved, onCancel }: { account?: AccountD
           <p className="font-medium">{t('accounts.duplicateTitle')}</p>
           <p className="mt-1">{t('accounts.duplicateBody', { name: dup.name, reason: t(`accounts.dupReason.${dup.reason}` as MessageKey) })}</p>
           <div className="mt-3 flex flex-wrap gap-2">
-            <Link href={`/accounts/${dup.id}`} className="inline-flex min-h-11 items-center rounded-lg bg-brand-600 px-4 text-sm font-medium text-white">
+            <Link href={`/accounts/${dup.id}`} className="inline-flex min-h-11 items-center rounded-lg bg-brand-600 px-4 text-sm font-medium text-on-brand">
               {t('accounts.duplicateOpen')}
             </Link>
             <Button type="button" variant="secondary" onClick={() => pending && save.mutate({ ...pending, force: true })}>{t('accounts.duplicateForce')}</Button>

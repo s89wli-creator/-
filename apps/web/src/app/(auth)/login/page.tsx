@@ -47,7 +47,7 @@ export default function LoginPage() {
         </div>
         <Button type="submit" className="w-full" loading={m.isPending}>{t('auth.login.submit')}</Button>
       </form>
-      <p className="mt-6 text-center text-sm text-ink-500">
+      <p className="mt-6 text-center text-sm text-fg-muted">
         {t('auth.login.noAccount')}{' '}
         <Link href="/register" className="font-medium text-brand-700 hover:underline">{t('auth.login.createCompany')}</Link>
       </p>

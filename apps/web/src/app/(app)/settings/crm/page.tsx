@@ -7,6 +7,7 @@ import {
 } from '@rakan/shared';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Alert, Badge, Button, Card, ErrorState, Field, Input, LoadingState, NoPermission, PageHeader, Select } from '@/components/ui';
+import { useConfirm, useToast } from '@/components/feedback';
 import { api } from '@/lib/api';
 import { useCrmSettings } from '@/lib/crm';
 import { validate, type FieldErrors } from '@/lib/forms';
@@ -41,18 +42,17 @@ function StageEditor({ pipeline, onSaved }: { pipeline: PipelineDto; onSaved: (s
   return (
     <div className="space-y-3">
       {save.error && <Alert tone="error">{err(save.error)}</Alert>}
-      {save.isSuccess && <Alert tone="success">{t('common.saved')}</Alert>}
       <ol className="space-y-2">
         {stages.map((s, i) => (
           <li key={s.id ?? s.key} className="flex flex-wrap items-center gap-2">
-            <span className="w-6 text-xs text-ink-400">{i + 1}</span>
+            <span className="w-6 text-xs text-fg-muted">{i + 1}</span>
             <Input aria-label={t('crmSettings.stageName')} className="min-w-40 flex-1" value={s.name} onChange={(e) => update(i, { name: e.target.value })} />
             <Select aria-label={t('crmSettings.category')} className="w-32" value={s.category} onChange={(e) => update(i, { category: e.target.value as StageCategory })}>
               {STAGE_CATEGORIES.map((c) => <option key={c} value={c}>{t(`crmSettings.category.${c}`)}</option>)}
             </Select>
             <Button variant="ghost" className="min-h-9 px-2" disabled={i === 0} onClick={() => move(i, -1)} aria-label={t('crmSettings.moveUp')}>↑</Button>
             <Button variant="ghost" className="min-h-9 px-2" disabled={i === stages.length - 1} onClick={() => move(i, 1)} aria-label={t('crmSettings.moveDown')}>↓</Button>
-            <Button variant="ghost" className="min-h-9 px-2 text-red-700" disabled={stages.length <= 2} onClick={() => setStages((x) => x.filter((_, j) => j !== i))} aria-label={t('common.delete')}>✕</Button>
+            <Button variant="ghost" className="min-h-9 px-2 text-danger" disabled={stages.length <= 2} onClick={() => setStages((x) => x.filter((_, j) => j !== i))} aria-label={t('common.delete')}>✕</Button>
           </li>
         ))}
       </ol>
@@ -69,6 +69,8 @@ function usePostSettings(path: string, onSaved: (s: CrmSettingsDto) => void) {
 }
 
 export default function CrmSettingsPage() {
+  const confirm = useConfirm();
+  const toast = useToast();
   const { t, err } = useI18n();
   const can = useCan();
   const qc = useQueryClient();
@@ -77,7 +79,10 @@ export default function CrmSettingsPage() {
   const [trackErrors, setTrackErrors] = useState<FieldErrors>({});
   const [cfErrors, setCfErrors] = useState<FieldErrors>({});
   const [cfType, setCfType] = useState<string>('text');
-  const onSaved = (s: CrmSettingsDto) => qc.setQueryData(['crm-settings'], s);
+  const onSaved = (s: CrmSettingsDto) => {
+    qc.setQueryData(['crm-settings'], s);
+    toast(t('common.saveSuccess'));
+  };
   const createTrack = usePostSettings('/crm/tracks', onSaved);
   const createReason = usePostSettings('/crm/reasons', onSaved);
   const createField = usePostSettings('/crm/custom-fields', onSaved);
@@ -92,7 +97,7 @@ export default function CrmSettingsPage() {
   }, [settings.data, pipelineId]);
 
   if (!can('crm.settings.manage')) return <NoPermission />;
-  if (settings.isLoading) return <LoadingState />;
+  if (settings.isLoading) return <LoadingState card />;
   if (settings.error) return <ErrorState error={settings.error} onRetry={() => settings.refetch()} />;
   const s = settings.data!;
   const trackName = (id: string | null) => s.tracks.find((x) => x.id === id)?.name;
@@ -133,7 +138,7 @@ export default function CrmSettingsPage() {
         <Card className="space-y-4 p-5">
           <div>
             <h2 className="font-semibold">{t('crmSettings.tracks')}</h2>
-            <p className="text-sm text-ink-500">{t('crmSettings.tracksHint')}</p>
+            <p className="text-sm text-fg-muted">{t('crmSettings.tracksHint')}</p>
           </div>
           <div className="flex flex-wrap gap-2">{s.tracks.map((tr) => <Badge key={tr.id} tone="brand">{tr.name}</Badge>)}</div>
           {createTrack.error && <Alert tone="error">{err(createTrack.error)}</Alert>}
@@ -166,12 +171,12 @@ export default function CrmSettingsPage() {
           <div className="grid gap-4 md:grid-cols-2">
             {OUTCOME_KINDS.map((k) => (
               <div key={k}>
-                <h3 className="mb-2 text-sm font-medium text-ink-700">{t(`crmSettings.reasonKind.${k}` as MessageKey)}</h3>
+                <h3 className="mb-2 text-sm font-medium text-fg-sub">{t(`crmSettings.reasonKind.${k}` as MessageKey)}</h3>
                 <ul className="flex flex-wrap gap-2">
                   {s.reasons.filter((r) => r.kind === k).map((r) => (
                     <li key={r.id}>
                       <button
-                        className={`rounded-full border px-3 py-1 text-sm ${r.isActive ? 'border-ink-200 bg-white' : 'border-dashed border-ink-200 text-ink-400 line-through'}`}
+                        className={`min-h-11 rounded-full border px-4 text-sm transition-colors duration-150 hover:border-line-strong ${r.isActive ? 'border-line bg-surface' : 'border-dashed border-line text-fg-muted line-through'}`}
                         title={r.isActive ? t('team.disable') : t('team.enable')}
                         onClick={() => toggleReason.mutate({ id: r.id, isActive: !r.isActive })}
                       >
@@ -196,14 +201,14 @@ export default function CrmSettingsPage() {
           <h2 className="font-semibold">{t('crmSettings.customFields')}</h2>
           {(createField.error || deleteField.error) && <Alert tone="error">{err(createField.error ?? deleteField.error)}</Alert>}
           {!!s.customFields.length && (
-            <ul className="divide-y divide-ink-100 rounded-lg border border-ink-100">
+            <ul className="divide-y divide-line-soft rounded-lg border border-line-soft">
               {s.customFields.map((f) => (
                 <li key={f.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
                   <span className="flex-1 font-medium">{f.label}</span>
                   <Badge>{t(`crmSettings.cfEntity.${f.entity}` as MessageKey)}</Badge>
                   <Badge tone="muted">{t(`crmSettings.cfType.${f.type}` as MessageKey)}</Badge>
                   {f.trackId && <Badge tone="brand">{trackName(f.trackId)}</Badge>}
-                  <Button variant="ghost" className="min-h-9 px-2 text-red-700" onClick={() => window.confirm(t('crmSettings.cfConfirmDelete', { name: f.label })) && deleteField.mutate(f.id)}>
+                  <Button variant="ghost" className="min-h-9 px-2 text-danger" onClick={() => void confirm({ title: t('crmSettings.cfConfirmDelete', { name: f.label }), tone: 'danger', confirmLabel: t('common.delete') }).then((ok) => ok && deleteField.mutate(f.id))}>
                     {t('common.delete')}
                   </Button>
                 </li>

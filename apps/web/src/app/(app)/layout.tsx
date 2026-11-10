@@ -5,30 +5,79 @@ import type { Permission } from '@rakan/shared';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
-import { LoadingState, Select } from '@/components/ui';
+import { Icon, type IconName } from '@/components/icons';
+import { LoadingState, Select, cx } from '@/components/ui';
 import { api, ApiError } from '@/lib/api';
 import type { MessageKey } from '@/lib/i18n';
 import { useI18n, useMe } from '@/lib/providers';
+import type { Theme } from '@/lib/theme';
 
-const NAV: { href: string; label: MessageKey; permission?: Permission; icon: string }[] = [
-  { href: '/home', label: 'nav.home', icon: 'M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z' },
-  { href: '/dashboard', label: 'nav.dashboard', permission: 'reports.read', icon: 'M4 20V10m6 10V4m6 16v-7m4 7H2' },
-  { href: '/accounts', label: 'nav.accounts', permission: 'crm.account.read', icon: 'M3 21V7l9-4 9 4v14M8 21v-6h8v6M8 10h.01M12 10h.01M16 10h.01' },
-  { href: '/pipeline', label: 'nav.pipeline', permission: 'crm.opportunity.read', icon: 'M4 4h4v16H4zM10 4h4v10h-4zM16 4h4v6h-4z' },
-  { href: '/visits', label: 'nav.visits', permission: 'crm.visit.read', icon: 'M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11Zm0-8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z' },
-  { href: '/tasks', label: 'nav.tasks', permission: 'crm.task.read', icon: 'M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9' },
-  { href: '/team', label: 'nav.team', permission: 'team.member.read', icon: 'M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0Zm-12 10a8 8 0 0 1 16 0' },
-  { href: '/team/territories', label: 'nav.territories', permission: 'team.territory.read', icon: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14' },
-  { href: '/settings/crm', label: 'nav.crmSettings', permission: 'crm.settings.manage', icon: 'M4 6h16M4 12h10M4 18h6m8-3 3 3-3 3' },
-  { href: '/settings/company', label: 'nav.company', permission: 'tenant.settings.read', icon: 'M4 21V5l8-3 8 3v16M9 21v-5h6v5M8 9h.01M12 9h.01M16 9h.01' },
-  { href: '/settings/audit', label: 'nav.audit', permission: 'audit.read', icon: 'M9 5h10M9 12h10M9 19h10M5 5h.01M5 12h.01M5 19h.01' },
+type NavItem = { href: string; label: MessageKey; permission?: Permission; icon: IconName };
+const GROUPS: { label?: MessageKey; items: NavItem[] }[] = [
+  {
+    items: [
+      { href: '/home', label: 'nav.home', icon: 'home' },
+      { href: '/dashboard', label: 'nav.dashboard', permission: 'reports.read', icon: 'chart' },
+    ],
+  },
+  {
+    label: 'nav.group.sales',
+    items: [
+      { href: '/accounts', label: 'nav.accounts', permission: 'crm.account.read', icon: 'building' },
+      { href: '/pipeline', label: 'nav.pipeline', permission: 'crm.opportunity.read', icon: 'kanban' },
+      { href: '/visits', label: 'nav.visits', permission: 'crm.visit.read', icon: 'pin' },
+      { href: '/tasks', label: 'nav.tasks', permission: 'crm.task.read', icon: 'checkSquare' },
+    ],
+  },
+  {
+    label: 'nav.group.team',
+    items: [
+      { href: '/team', label: 'nav.team', permission: 'team.member.read', icon: 'users' },
+      { href: '/team/territories', label: 'nav.territories', permission: 'team.territory.read', icon: 'map' },
+    ],
+  },
+  {
+    label: 'nav.group.settings',
+    items: [
+      { href: '/settings/crm', label: 'nav.crmSettings', permission: 'crm.settings.manage', icon: 'sliders' },
+      { href: '/settings/company', label: 'nav.company', permission: 'tenant.settings.read', icon: 'settings' },
+      { href: '/settings/audit', label: 'nav.audit', permission: 'audit.read', icon: 'list' },
+    ],
+  },
 ];
+/** Phone bottom bar: at most 4 destinations + "More" (≤ 5 per the guidelines). */
+const BOTTOM: string[] = ['/home', '/visits', '/tasks', '/accounts'];
 
-function Icon({ d }: { d: string }) {
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('');
+}
+
+function ThemeSwitch() {
+  const { t, theme, setTheme } = useI18n();
+  const options: { id: Theme; icon: IconName; label: MessageKey }[] = [
+    { id: 'light', icon: 'sun', label: 'theme.light' },
+    { id: 'system', icon: 'monitor', label: 'theme.system' },
+    { id: 'dark', icon: 'moon', label: 'theme.dark' },
+  ];
   return (
-    <svg viewBox="0 0 24 24" className="size-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d={d} />
-    </svg>
+    <div role="radiogroup" aria-label={t('theme.label')} className="grid grid-cols-3 gap-1 rounded-lg bg-subtle-strong p-1">
+      {options.map((o) => (
+        <button
+          key={o.id}
+          role="radio"
+          aria-checked={theme === o.id}
+          title={t(o.label)}
+          onClick={() => setTheme(o.id)}
+          className={cx(
+            'flex min-h-9 items-center justify-center gap-1.5 rounded-md text-xs transition-[background-color,color,box-shadow] duration-150',
+            theme === o.id ? 'bg-surface font-medium text-fg shadow-xs' : 'text-fg-muted hover:text-fg',
+          )}
+        >
+          <Icon name={o.icon} size={16} />
+          <span>{t(o.label)}</span>
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -38,12 +87,27 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const qc = useQueryClient();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [drawer, setDrawer] = useState<'closed' | 'open' | 'closing'>('closed');
 
   useEffect(() => {
     if (me.error instanceof ApiError && me.error.status === 401) router.replace('/login');
   }, [me.error, router]);
-  useEffect(() => setMenuOpen(false), [pathname]);
+  const closeDrawer = () => {
+    if (drawer !== 'open') return;
+    setDrawer('closing');
+    window.setTimeout(() => setDrawer('closed'), 160);
+  };
+  useEffect(() => setDrawer('closed'), [pathname]);
+  useEffect(() => {
+    if (drawer !== 'open') return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closeDrawer();
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  });
 
   const logout = useMutation({
     mutationFn: () => api('/auth/logout', { method: 'POST' }),
@@ -60,89 +124,186 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     },
   });
 
-  if (!me.data) return <LoadingState />;
+  if (!me.data) {
+    return (
+      <div className="mx-auto max-w-5xl px-4 py-10">
+        <LoadingState card rows={5} />
+      </div>
+    );
+  }
   const perms = me.data.activeTenant?.permissions ?? [];
-  const items = NAV.filter((n) => !n.permission || perms.includes(n.permission));
-  const isActive = (href: string) =>
-    pathname === href || (href !== '/home' && href !== '/team' && pathname.startsWith(href + '/'));
+  const allowed = (n: NavItem) => !n.permission || perms.includes(n.permission);
+  const isActive = (href: string) => pathname === href || (href !== '/home' && href !== '/team' && pathname.startsWith(href + '/'));
+  const flat = GROUPS.flatMap((g) => g.items).filter(allowed);
+  const bottom = BOTTOM.map((h) => flat.find((n) => n.href === h)).filter(Boolean) as NavItem[];
 
-  const nav = (
-    <nav className="space-y-1" aria-label="main">
-      {items.map((n) => (
-        <Link
-          key={n.href}
-          href={n.href}
-          aria-current={isActive(n.href) ? 'page' : undefined}
-          className={`flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm ${
-            isActive(n.href) ? 'bg-brand-50 font-medium text-brand-700' : 'text-ink-700 hover:bg-ink-100'
-          }`}
-        >
-          <Icon d={n.icon} />
-          {t(n.label)}
-        </Link>
-      ))}
+  const NavLink = ({ n }: { n: NavItem }) => (
+    <Link
+      href={n.href}
+      aria-current={isActive(n.href) ? 'page' : undefined}
+      className={cx(
+        'group relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-ui transition-colors duration-150',
+        isActive(n.href) ? 'bg-brand-50 font-semibold text-brand-700' : 'text-fg-sub hover:bg-subtle-strong hover:text-fg',
+      )}
+    >
+      <span
+        aria-hidden
+        className={cx(
+          'absolute inset-y-2 start-0 w-0.5 rounded-full bg-brand-600 transition-[transform,opacity] duration-200 ease-out',
+          isActive(n.href) ? 'scale-y-100 opacity-100' : 'scale-y-0 opacity-0',
+        )}
+      />
+      <Icon name={n.icon} className={isActive(n.href) ? '' : 'text-fg-muted transition-colors group-hover:text-fg-sub'} />
+      {t(n.label)}
+    </Link>
+  );
+
+  const navContent = (
+    <nav aria-label={t('nav.mainMenu')} className="space-y-5">
+      {GROUPS.map((g, gi) => {
+        const items = g.items.filter(allowed);
+        if (!items.length) return null;
+        return (
+          <div key={gi}>
+            {g.label && <p className="mb-1.5 px-3 text-xs font-medium text-fg-muted">{t(g.label)}</p>}
+            <div className="space-y-0.5">{items.map((n) => <NavLink key={n.href} n={n} />)}</div>
+          </div>
+        );
+      })}
     </nav>
   );
 
-  const sidebar = (
-    <div className="flex h-full flex-col gap-6 p-4">
-      <div className="flex items-center gap-2 px-1">
-        <span className="grid size-9 place-items-center rounded-lg bg-brand-600 text-lg font-bold text-white" aria-hidden>ر</span>
+  const brand = (
+    <div className="flex items-center gap-3 px-1">
+      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-600 text-lg font-bold text-on-brand shadow-xs" aria-hidden>ر</span>
+      <div className="min-w-0">
+        <p className="font-semibold leading-tight">{t('app.name')}</p>
+        <p className="truncate text-xs text-fg-muted">{me.data.activeTenant?.name ?? '—'}</p>
+      </div>
+    </div>
+  );
+
+  const userPanel = (
+    <div className="space-y-3 border-t border-line-soft pt-4">
+      <div className="flex items-center gap-3 px-1">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-subtle-strong text-sm font-semibold text-fg-sub" aria-hidden>
+          {initials(me.data.user.fullName)}
+        </span>
         <div className="min-w-0">
-          <p className="font-semibold leading-tight">{t('app.name')}</p>
-          <p className="truncate text-xs text-ink-500">{me.data.activeTenant?.name ?? '—'}</p>
+          <p className="truncate text-sm font-medium">{me.data.user.fullName}</p>
+          <p className="truncate text-xs text-fg-muted"><bdi>{me.data.user.email}</bdi></p>
         </div>
       </div>
-      {me.data.memberships.length > 1 && (
-        <div>
-          <label htmlFor="tenant-switch" className="mb-1 block px-1 text-xs text-ink-500">{t('nav.switchCompany')}</label>
-          <Select
-            id="tenant-switch"
-            value={me.data.activeTenant?.id ?? ''}
-            disabled={switchTenant.isPending}
-            onChange={(e) => switchTenant.mutate(e.target.value)}
-          >
-            {me.data.memberships.map((m) => (
-              <option key={m.tenantId} value={m.tenantId}>{m.tenantName}</option>
-            ))}
-          </Select>
-        </div>
-      )}
-      {nav}
-      <div className="mt-auto space-y-1 border-t border-ink-100 pt-4">
-        <p className="truncate px-3 text-sm font-medium">{me.data.user.fullName}</p>
-        <p className="truncate px-3 text-xs text-ink-500"><bdi>{me.data.user.email}</bdi></p>
-        <button className="flex min-h-11 w-full items-center rounded-lg px-3 text-sm text-ink-700 hover:bg-ink-100" onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}>
-          {t('common.language')}
+      <ThemeSwitch />
+      <div className="grid grid-cols-2 gap-1">
+        <button className="flex min-h-10 items-center justify-center gap-2 rounded-lg text-sm text-fg-sub transition-colors hover:bg-subtle-strong" onClick={() => setLocale(locale === 'ar' ? 'en' : 'ar')}>
+          <Icon name="globe" size={16} /> {t('common.language')}
         </button>
-        <button className="flex min-h-11 w-full items-center rounded-lg px-3 text-sm text-red-700 hover:bg-red-50" onClick={() => logout.mutate()}>
-          {t('auth.logout')}
+        <button className="flex min-h-10 items-center justify-center gap-2 rounded-lg text-sm text-danger transition-colors hover:bg-danger-soft" onClick={() => logout.mutate()}>
+          <Icon name="logout" size={16} /> {t('auth.logout')}
         </button>
       </div>
     </div>
   );
 
+  const tenantSwitcher = me.data.memberships.length > 1 && (
+    <div>
+      <label htmlFor="tenant-switch" className="mb-1 block px-1 text-xs text-fg-muted">{t('nav.switchCompany')}</label>
+      <Select id="tenant-switch" value={me.data.activeTenant?.id ?? ''} disabled={switchTenant.isPending} onChange={(e) => switchTenant.mutate(e.target.value)}>
+        {me.data.memberships.map((m) => <option key={m.tenantId} value={m.tenantId}>{m.tenantName}</option>)}
+      </Select>
+    </div>
+  );
+
   return (
     <div className="min-h-dvh lg:flex">
-      <aside className="hidden w-64 shrink-0 border-e border-ink-200 bg-white lg:block lg:min-h-dvh">{sidebar}</aside>
-      <div className="flex items-center justify-between border-b border-ink-200 bg-white px-4 py-3 lg:hidden">
-        <span className="font-semibold">{me.data.activeTenant?.name ?? t('app.name')}</span>
+      <a href="#main" className="fixed start-3 top-3 z-[60] -translate-y-20 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-on-brand transition-transform focus:translate-y-0">
+        {t('common.skipToContent')}
+      </a>
+
+      {/* Desktop sidebar */}
+      <aside className="sticky top-0 hidden h-dvh w-72 shrink-0 flex-col gap-6 overflow-y-auto border-e border-line bg-surface p-4 lg:flex">
+        {brand}
+        {tenantSwitcher}
+        {navContent}
+        <div className="mt-auto">{userPanel}</div>
+      </aside>
+
+      {/* Phone top bar */}
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-surface/90 px-4 py-2.5 backdrop-blur lg:hidden">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-600 font-bold text-on-brand" aria-hidden>ر</span>
+          <span className="truncate font-semibold">{me.data.activeTenant?.name ?? t('app.name')}</span>
+        </div>
         <button
-          className="grid size-11 place-items-center rounded-lg hover:bg-ink-100"
-          aria-expanded={menuOpen}
-          aria-controls="mobile-nav"
-          aria-label="menu"
-          onClick={() => setMenuOpen((v) => !v)}
+          className="grid size-11 place-items-center rounded-lg text-fg-sub transition-colors hover:bg-subtle-strong"
+          aria-expanded={drawer === 'open'}
+          aria-controls="mobile-drawer"
+          aria-label={t('nav.mainMenu')}
+          onClick={() => setDrawer('open')}
         >
-          <Icon d="M4 7h16M4 12h16M4 17h16" />
+          <Icon name="menu" />
         </button>
-      </div>
-      {menuOpen && (
-        <div id="mobile-nav" className="border-b border-ink-200 bg-white lg:hidden">{sidebar}</div>
+      </header>
+
+      {/* Phone drawer (enters from the inline-start edge) */}
+      {drawer !== 'closed' && (
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label={t('nav.mainMenu')} id="mobile-drawer">
+          <div className={cx('absolute inset-0 bg-scrim', drawer === 'closing' ? 'animate-fade-out' : 'animate-fade-in')} onClick={closeDrawer} />
+          <div
+            className={cx(
+              'absolute inset-y-0 start-0 flex w-[min(20rem,86vw)] flex-col gap-6 overflow-y-auto bg-surface p-4 shadow-xl',
+              drawer === 'closing' ? 'animate-fade-out' : 'animate-drawer-in',
+            )}
+          >
+            <div className="flex items-center justify-between">
+              {brand}
+              <button className="grid size-11 place-items-center rounded-lg text-fg-sub hover:bg-subtle-strong" aria-label={t('common.close')} onClick={closeDrawer}>
+                <Icon name="close" />
+              </button>
+            </div>
+            {tenantSwitcher}
+            {navContent}
+            <div className="mt-auto">{userPanel}</div>
+          </div>
+        </div>
       )}
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:py-10">
-        <div className="mx-auto max-w-5xl">{children}</div>
+
+      <main id="main" className="min-w-0 flex-1 px-4 pb-28 pt-6 sm:px-8 lg:pb-12 lg:pt-10">
+        <div key={pathname} className="mx-auto max-w-[70rem] animate-page-in">
+          {children}
+        </div>
       </main>
+
+      {/* Phone bottom navigation */}
+      {bottom.length > 0 && (
+        <nav
+          aria-label={t('nav.mainMenu')}
+          className="fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+          style={{ gridTemplateColumns: `repeat(${bottom.length + 1}, minmax(0, 1fr))` }}
+        >
+          {bottom.map((n) => (
+            <Link
+              key={n.href}
+              href={n.href}
+              aria-current={isActive(n.href) ? 'page' : undefined}
+              className={cx(
+                'flex min-h-16 flex-col items-center justify-center gap-1 text-xs transition-colors duration-150',
+                isActive(n.href) ? 'font-semibold text-brand-700' : 'text-fg-muted',
+              )}
+            >
+              <span className={cx('grid h-8 w-14 place-items-center rounded-full transition-colors duration-200', isActive(n.href) && 'bg-brand-50')}>
+                <Icon name={n.icon} />
+              </span>
+              {t(n.label)}
+            </Link>
+          ))}
+          <button className="flex min-h-16 flex-col items-center justify-center gap-1 text-xs text-fg-muted" onClick={() => setDrawer('open')} aria-label={t('nav.more')}>
+            <span className="grid h-8 w-14 place-items-center rounded-full"><Icon name="more" /></span>
+            {t('nav.more')}
+          </button>
+        </nav>
+      )}
     </div>
   );
 }

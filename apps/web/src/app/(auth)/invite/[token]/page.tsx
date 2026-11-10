@@ -40,7 +40,7 @@ export default function InvitePage() {
     },
   });
 
-  if (preview.isLoading || me.isLoading) return <LoadingState />;
+  if (preview.isLoading || me.isLoading) return <LoadingState card />;
   if (preview.error) {
     return preview.error instanceof ApiError && preview.error.status === 404 ? (
       <Alert tone="error">{t('invite.notFound')}</Alert>
@@ -61,7 +61,7 @@ export default function InvitePage() {
   return (
     <>
       <h1 className="text-xl font-semibold">{t('invite.title')}</h1>
-      <p className="mb-6 mt-2 text-sm text-ink-700">
+      <p className="mb-6 mt-2 text-sm text-fg-sub">
         {t('invite.body', { company: p.tenantName, role: t(`role.${p.role}`) })}
       </p>
       {p.status === 'expired' && <Alert tone="error">{t('invite.expired')}</Alert>}
@@ -86,7 +86,7 @@ export default function InvitePage() {
             <form onSubmit={submitNew} noValidate className="space-y-4">
               <p className="text-sm font-medium">{t('invite.createAccount')}</p>
               <Field label={t('common.email')} htmlFor="email">
-                <Input id="email" value={p.email} readOnly dir="ltr" className="bg-ink-50" />
+                <Input id="email" value={p.email} readOnly dir="ltr" className="bg-subtle" />
               </Field>
               <Field label={t('common.fullName')} htmlFor="fullName" error={errors.fullName && t(errors.fullName.key, errors.fullName.vars)}>
                 <Input id="fullName" name="fullName" autoComplete="name" aria-invalid={!!errors.fullName} />

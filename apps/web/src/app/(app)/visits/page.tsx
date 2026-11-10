@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { VisitForm } from '@/components/crm/forms';
 import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, Modal, NoPermission, PageHeader, Select, formatDay, formatTime } from '@/components/ui';
 import { api } from '@/lib/api';
+import { Icon } from '@/components/icons';
 import { useMembers, weekStart } from '@/lib/crm';
 import type { MessageKey } from '@/lib/i18n';
 import { useCan, useI18n, useInvalidate } from '@/lib/providers';
@@ -37,13 +38,13 @@ export default function VisitsPage() {
       <PageHeader
         title={t('visits.title')}
         subtitle={t('visits.subtitle')}
-        actions={can('crm.visit.write') && <Button onClick={() => setCreating(true)}>{t('visits.new')}</Button>}
+        actions={can('crm.visit.write') && <Button icon="plus" onClick={() => setCreating(true)}>{t('visits.new')}</Button>}
       />
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Button variant="secondary" onClick={() => setOffset((o) => o - 1)} aria-label={t('common.previous')}>{locale === 'ar' ? '→' : '←'}</Button>
+        <Button variant="secondary" onClick={() => setOffset((o) => o - 1)} aria-label={t('common.previous')}><Icon name="chevronStart" size={16} /></Button>
         <Button variant={offset === 0 ? 'primary' : 'secondary'} onClick={() => setOffset(0)}>{t('visits.thisWeek')}</Button>
-        <Button variant="secondary" onClick={() => setOffset((o) => o + 1)} aria-label={t('common.next')}>{locale === 'ar' ? '←' : '→'}</Button>
-        <span className="text-sm text-ink-500">{formatDay(from.toISOString(), locale)} — {formatDay(new Date(to.getTime() - 1).toISOString(), locale)}</span>
+        <Button variant="secondary" onClick={() => setOffset((o) => o + 1)} aria-label={t('common.next')}><Icon name="chevronEnd" size={16} /></Button>
+        <span className="text-sm text-fg-muted">{formatDay(from.toISOString(), locale)} — {formatDay(new Date(to.getTime() - 1).toISOString(), locale)}</span>
         {can('team.member.read') && (
           <Select aria-label={t('visits.rep')} className="ms-auto w-52" value={rep} onChange={(e) => setRep(e.target.value)}>
             <option value="">{t('visits.rep')}: {t('common.all')}</option>
@@ -52,11 +53,11 @@ export default function VisitsPage() {
         )}
       </div>
       {visits.isLoading ? (
-        <LoadingState />
+        <LoadingState card />
       ) : visits.error ? (
         <ErrorState error={visits.error} onRetry={() => visits.refetch()} />
       ) : !visits.data!.length ? (
-        <Card><EmptyState>{t('visits.empty')}</EmptyState></Card>
+        <Card><EmptyState icon="calendar" action={can('crm.visit.write') && <Button variant="secondary" icon="plus" onClick={() => setCreating(true)}>{t('visits.new')}</Button>}>{t('visits.empty')}</EmptyState></Card>
       ) : (
         <div className="space-y-4">
           {days.map((d) => {
@@ -64,16 +65,16 @@ export default function VisitsPage() {
             if (!items.length) return null;
             return (
               <section key={d.toISOString()}>
-                <h2 className={`mb-2 text-sm font-semibold ${dayKey(d) === todayKey ? 'text-brand-700' : 'text-ink-700'}`}>{formatDay(d.toISOString(), locale)}</h2>
+                <h2 className={`mb-2 text-sm font-semibold ${dayKey(d) === todayKey ? 'text-brand-700' : 'text-fg-sub'}`}>{formatDay(d.toISOString(), locale)}</h2>
                 <Card>
-                  <ul className="divide-y divide-ink-100">
+                  <ul className="stagger divide-y divide-line-soft">
                     {items.map((v) => (
                       <li key={v.id}>
-                        <Link href={`/visits/${v.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-ink-50">
+                        <Link href={`/visits/${v.id}`} className="flex items-center gap-3 px-4 py-3 transition-colors duration-150 hover:bg-subtle">
                           <span className="w-14 shrink-0 text-sm font-semibold tabular-nums">{formatTime(v.scheduledStart, locale)}</span>
                           <div className="min-w-0 flex-1">
                             <p className="truncate font-medium">{v.accountName}</p>
-                            <p className="truncate text-sm text-ink-500">{[v.accountCity, v.repName, v.purpose].filter(Boolean).join(' · ')}</p>
+                            <p className="truncate text-sm text-fg-muted">{[v.accountCity, v.repName, v.purpose].filter(Boolean).join(' · ')}</p>
                           </div>
                           <Badge tone={v.status === 'completed' ? 'brand' : v.status === 'cancelled' ? 'muted' : v.status === 'in_progress' ? 'warn' : 'neutral'}>
                             {t(`visits.status.${v.status}` as MessageKey)}

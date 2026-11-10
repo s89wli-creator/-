@@ -3,20 +3,21 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Permission, TaskDto, VisitDto } from '@rakan/shared';
 import Link from 'next/link';
-import { Alert, Badge, Card, EmptyState, PageHeader, formatTime } from '@/components/ui';
+import { Icon, type IconName } from '@/components/icons';
+import { Alert, Badge, Card, EmptyState, PageHeader, SectionTitle, formatTime } from '@/components/ui';
 import { api } from '@/lib/api';
 import type { MessageKey } from '@/lib/i18n';
 import { useCan, useI18n, useMe } from '@/lib/providers';
 
-const SECTIONS: { href: string; label: MessageKey; permission: Permission }[] = [
-  { href: '/dashboard', label: 'nav.dashboard', permission: 'reports.read' },
-  { href: '/accounts', label: 'nav.accounts', permission: 'crm.account.read' },
-  { href: '/pipeline', label: 'nav.pipeline', permission: 'crm.opportunity.read' },
-  { href: '/visits', label: 'nav.visits', permission: 'crm.visit.read' },
-  { href: '/tasks', label: 'nav.tasks', permission: 'crm.task.read' },
-  { href: '/team', label: 'nav.team', permission: 'team.member.read' },
-  { href: '/settings/crm', label: 'nav.crmSettings', permission: 'crm.settings.manage' },
-  { href: '/settings/company', label: 'nav.company', permission: 'tenant.settings.read' },
+const SECTIONS: { href: string; label: MessageKey; permission: Permission; icon: IconName }[] = [
+  { href: '/dashboard', label: 'nav.dashboard', permission: 'reports.read', icon: 'chart' },
+  { href: '/accounts', label: 'nav.accounts', permission: 'crm.account.read', icon: 'building' },
+  { href: '/pipeline', label: 'nav.pipeline', permission: 'crm.opportunity.read', icon: 'kanban' },
+  { href: '/visits', label: 'nav.visits', permission: 'crm.visit.read', icon: 'pin' },
+  { href: '/tasks', label: 'nav.tasks', permission: 'crm.task.read', icon: 'checkSquare' },
+  { href: '/team', label: 'nav.team', permission: 'team.member.read', icon: 'users' },
+  { href: '/settings/crm', label: 'nav.crmSettings', permission: 'crm.settings.manage', icon: 'sliders' },
+  { href: '/settings/company', label: 'nav.company', permission: 'tenant.settings.read', icon: 'settings' },
 ];
 
 function dayRange() {
@@ -53,12 +54,12 @@ export default function HomePage() {
           {can('crm.visit.read') && (
             <div className="grid gap-4 lg:grid-cols-2">
               <Card>
-                <h2 className="border-b border-ink-100 px-5 py-3 font-semibold">{t('home.todayVisits')}</h2>
+                <SectionTitle>{t('home.todayVisits')}</SectionTitle>
                 {visits.data?.length ? (
-                  <ul className="divide-y divide-ink-100">
+                  <ul className="stagger divide-y divide-line-soft">
                     {visits.data.map((v) => (
                       <li key={v.id}>
-                        <Link href={`/visits/${v.id}`} className="flex items-center gap-3 px-5 py-3 hover:bg-ink-50">
+                        <Link href={`/visits/${v.id}`} className="flex items-center gap-3 px-5 py-3 transition-colors duration-150 hover:bg-subtle">
                           <span className="w-14 text-sm font-semibold tabular-nums">{formatTime(v.scheduledStart, locale)}</span>
                           <span className="min-w-0 flex-1 truncate">{v.accountName}</span>
                           <Badge tone={v.status === 'completed' ? 'brand' : 'neutral'}>{t(`visits.status.${v.status}` as MessageKey)}</Badge>
@@ -67,13 +68,13 @@ export default function HomePage() {
                     ))}
                   </ul>
                 ) : (
-                  <EmptyState>{t('home.noVisitsToday')}</EmptyState>
+                  <EmptyState icon="calendar">{t('home.noVisitsToday')}</EmptyState>
                 )}
               </Card>
               <Card>
-                <h2 className="border-b border-ink-100 px-5 py-3 font-semibold">{t('home.myTasks')}</h2>
+                <SectionTitle>{t('home.myTasks')}</SectionTitle>
                 {tasks.data?.length ? (
-                  <ul className="divide-y divide-ink-100">
+                  <ul className="stagger divide-y divide-line-soft">
                     {tasks.data.map((x) => (
                       <li key={x.id} className="flex items-center gap-3 px-5 py-3">
                         <span className="min-w-0 flex-1 truncate">{x.title}</span>
@@ -82,18 +83,19 @@ export default function HomePage() {
                     ))}
                   </ul>
                 ) : (
-                  <EmptyState>{t('tasks.empty')}</EmptyState>
+                  <EmptyState icon="checkSquare">{t('tasks.empty')}</EmptyState>
                 )}
-                <div className="border-t border-ink-100 px-5 py-3 text-sm"><Link href="/tasks" className="text-brand-700 hover:underline">{t('nav.tasks')} ←</Link></div>
+                <div className="border-t border-line-soft px-5 py-1 text-sm"><Link href="/tasks" className="inline-flex min-h-11 items-center gap-1 text-brand-700 hover:underline">{t('nav.tasks')} <Icon name="chevronEnd" size={16} /></Link></div>
               </Card>
             </div>
           )}
           <div>
-            <h2 className="mb-3 text-sm font-medium text-ink-500">{t('home.sections')}</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <h2 className="mb-3 text-sm font-medium text-fg-muted">{t('home.sections')}</h2>
+            <div className="stagger grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {SECTIONS.filter((s) => can(s.permission)).map((s) => (
                 <Link key={s.href} href={s.href}>
-                  <Card className="p-4 transition-colors hover:border-brand-500">
+                  <Card interactive className="flex items-center gap-3 p-4">
+                    <span className="grid size-10 place-items-center rounded-lg bg-brand-50 text-brand-700"><Icon name={s.icon} /></span>
                     <p className="font-medium">{t(s.label)}</p>
                   </Card>
                 </Link>

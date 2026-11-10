@@ -78,7 +78,7 @@ async function noOverflow(page, name) {
     'مستودعات الشمال,حائل,1010000002,,,طالبو النقل\n' +
     'شركة مصنع الأمل للأغذية المحدودة,الرياض,,,,طالبو النقل\n');
   await nav('العملاء');
-  await owner.getByRole('link', { name: 'استيراد' }).click();
+  await owner.getByRole('link', { name: 'استيراد' }).first().click();
   await owner.setInputFiles('input[type=file]', csvPath);
   await owner.getByRole('button', { name: 'رفع وقراءة الملف' }).click();
   await owner.getByText('وجدنا 3 صفاً و6 عموداً').waitFor();

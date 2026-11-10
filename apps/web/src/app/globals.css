@@ -1,23 +1,293 @@
 @import "tailwindcss";
 
-/* Design tokens — RTL-first; use logical utilities only (ms/me/ps/pe/start/end). */
-@theme {
+/*
+ * Rakan design tokens — see design-system/rakan/MASTER.md.
+ * Components use semantic tokens only (bg-surface, text-fg-muted, border-line-strong…), never raw colors,
+ * so light/dark themes and contrast fixes live in one place.
+ */
+
+@theme inline {
   --font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui, "Segoe UI", Tahoma, sans-serif;
-  --color-brand-50: #effcf9;
-  --color-brand-100: #c9f4ea;
-  --color-brand-500: #13a58b;
-  --color-brand-600: #0d8571;
-  --color-brand-700: #0e6a5b;
-  --color-ink-50: #f7f7f5;
-  --color-ink-100: #eeeeea;
-  --color-ink-200: #dddcd6;
-  --color-ink-400: #9b9a91;
-  --color-ink-500: #74736b;
-  --color-ink-700: #44433d;
-  --color-ink-900: #1c1c19;
+
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-subtle: var(--subtle);
+  --color-subtle-strong: var(--subtle-strong);
+  --color-fg: var(--fg);
+  --color-fg-sub: var(--fg-sub);
+  --color-fg-muted: var(--fg-muted);
+  --color-line-soft: var(--line-soft);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-brand-50: var(--brand-50);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-on-brand: var(--on-brand);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-warn-line: var(--warn-line);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-scrim: var(--scrim);
 }
 
-html, body { background: var(--color-ink-50); color: var(--color-ink-900); }
-body { -webkit-font-smoothing: antialiased; }
-:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
-dialog::backdrop { background: rgb(28 28 25 / 0.45); }
+@theme {
+  /* Type scale: 16px base, generous line-height for Arabic, never letter-spacing (breaks joined letters). */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.6;
+  --text-ui: 0.9375rem;
+  --text-ui--line-height: 1.6;
+  --text-base: 1rem;
+  --text-base--line-height: 1.7;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.6;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.5;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.4;
+  --text-3xl: 1.875rem;
+  --text-3xl--line-height: 1.2;
+
+  --shadow-xs: 0 1px 2px rgb(16 24 20 / 0.05);
+  --shadow-md: 0 8px 20px -6px rgb(16 24 20 / 0.18);
+  --shadow-xl: 0 24px 48px -12px rgb(16 24 20 / 0.28);
+
+  --ease-out-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-soft: cubic-bezier(0.4, 0, 1, 1);
+
+  --animate-page-in: page-in 320ms var(--ease-out-soft) both;
+  --animate-fade-up: fade-up 260ms var(--ease-out-soft) both;
+  --animate-fade-in: fade-in 220ms var(--ease-out-soft) both;
+  --animate-scale-in: scale-in 220ms var(--ease-out-soft) both;
+  --animate-scale-out: scale-out 160ms var(--ease-in-soft) both;
+  --animate-fade-out: fade-out 160ms var(--ease-in-soft) both;
+  --animate-toast-in: toast-in 260ms var(--ease-out-soft) both;
+  --animate-drawer-in: drawer-in 320ms var(--ease-out-soft) both;
+  --animate-pop: pop 220ms var(--ease-out-soft);
+  --animate-shimmer: shimmer 1400ms linear infinite;
+
+  @keyframes page-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  @keyframes scale-in {
+    from { opacity: 0; transform: translateY(6px) scale(0.97); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes scale-out {
+    from { opacity: 1; transform: none; }
+    to { opacity: 0; transform: translateY(4px) scale(0.98); }
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  /* Drawer enters from the inline-start edge (right in Arabic, left in English). */
+  @keyframes drawer-in {
+    from { transform: translateX(calc(100% * var(--start-dir))); }
+    to { transform: none; }
+  }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+}
+
+:root {
+  color-scheme: light;
+  --start-dir: 1; /* RTL: start edge is the right */
+  --page: #f6f7f5;
+  --surface: #ffffff;
+  --subtle: #f1f2ef;
+  --subtle-strong: #e8e9e5;
+  --fg: #1c1c19;
+  --fg-sub: #3f3e38;
+  --fg-muted: #62615a;
+  --line-soft: #ebebe6;
+  --line: #dcdcd5;
+  --line-strong: #87867e;
+  --brand-50: #ecf8f4;
+  --brand-600: #0b7563;
+  --brand-700: #0a5f51;
+  --on-brand: #ffffff;
+  --danger: #b42318;
+  --danger-soft: #fef3f2;
+  --danger-line: #fecdca;
+  --warn: #93370d;
+  --warn-soft: #fffaeb;
+  --warn-line: #fedf89;
+  --success: #067647;
+  --success-soft: #ecfdf3;
+  --scrim: rgb(17 19 18 / 0.5);
+}
+[dir="ltr"] {
+  --start-dir: -1;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #111312;
+  --surface: #1a1d1b;
+  --subtle: #202421;
+  --subtle-strong: #2a2e2b;
+  --fg: #ecece7;
+  --fg-sub: #cfcfc7;
+  --fg-muted: #a3a39a;
+  --line-soft: #262a27;
+  --line: #2e322f;
+  --line-strong: #737a74;
+  --brand-50: #12302a;
+  --brand-600: #2fb39a;
+  --brand-700: #5fd0b8;
+  --on-brand: #08201b;
+  --danger: #f97066;
+  --danger-soft: #2d1512;
+  --danger-line: #5a2620;
+  --warn: #fdb022;
+  --warn-soft: #2b2111;
+  --warn-line: #5c4210;
+  --success: #47cd89;
+  --success-soft: #0f2a1d;
+  --scrim: rgb(0 0 0 / 0.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+    --page: #111312;
+    --surface: #1a1d1b;
+    --subtle: #202421;
+    --subtle-strong: #2a2e2b;
+    --fg: #ecece7;
+    --fg-sub: #cfcfc7;
+    --fg-muted: #a3a39a;
+    --line-soft: #262a27;
+    --line: #2e322f;
+    --line-strong: #737a74;
+    --brand-50: #12302a;
+    --brand-600: #2fb39a;
+    --brand-700: #5fd0b8;
+    --on-brand: #08201b;
+    --danger: #f97066;
+    --danger-soft: #2d1512;
+    --danger-line: #5a2620;
+    --warn: #fdb022;
+    --warn-soft: #2b2111;
+    --warn-line: #5c4210;
+    --success: #47cd89;
+    --success-soft: #0f2a1d;
+    --scrim: rgb(0 0 0 / 0.6);
+  }
+}
+
+html,
+body {
+  background: var(--page);
+  color: var(--fg);
+}
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  letter-spacing: 0; /* Arabic letters must stay joined */
+}
+:focus-visible {
+  outline: 2px solid var(--brand-600);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+::selection {
+  background: var(--brand-50);
+  color: var(--fg);
+}
+
+/* Native dialog: animated open/close (the close is driven by data-closing; see Modal). */
+dialog::backdrop {
+  background: var(--scrim);
+  animation: var(--animate-fade-in);
+}
+dialog[open] {
+  animation: var(--animate-scale-in);
+}
+dialog[data-closing] {
+  animation: var(--animate-scale-out);
+}
+dialog[data-closing]::backdrop {
+  animation: var(--animate-fade-out);
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  background: linear-gradient(90deg, var(--subtle) 25%, var(--subtle-strong) 37%, var(--subtle) 63%);
+  background-size: 400% 100%;
+  animation: var(--animate-shimmer);
+  border-radius: 6px;
+}
+
+/* First-load stagger: only the first 8 children animate, 30ms apart. */
+.stagger > * {
+  animation: var(--animate-fade-up);
+}
+.stagger > *:nth-child(2) { animation-delay: 30ms; }
+.stagger > *:nth-child(3) { animation-delay: 60ms; }
+.stagger > *:nth-child(4) { animation-delay: 90ms; }
+.stagger > *:nth-child(5) { animation-delay: 120ms; }
+.stagger > *:nth-child(6) { animation-delay: 150ms; }
+.stagger > *:nth-child(7) { animation-delay: 180ms; }
+.stagger > *:nth-child(n + 8) { animation-delay: 210ms; }
+
+/* Bars grow from the inline-start edge */
+.bar-grow {
+  transform-origin: right;
+  animation: bar-grow 600ms var(--ease-out-soft) both;
+}
+[dir="ltr"] .bar-grow {
+  transform-origin: left;
+}
+@keyframes bar-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* Check mark that draws itself */
+.check-draw path {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: check-draw 260ms var(--ease-out-soft) forwards;
+}
+@keyframes check-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Accessibility: users who ask for less motion get final states immediately. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
