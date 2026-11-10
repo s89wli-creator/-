@@ -1,5 +1,6 @@
 import { DynamicModule, Global, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { IdempotencyInterceptor } from './common/idempotency.interceptor';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'node:crypto';
@@ -47,6 +48,9 @@ import { LLM_PROVIDER, type LlmProvider } from './ai/llm';
 import { MessagingService } from './ai/messaging.service';
 import { AiRuntimeService } from './ai/runtime.service';
 import { ToolGatewayService } from './ai/tool-gateway.service';
+import { FieldController, RecordingsController } from './field/field.controller';
+import { RecordingsService } from './field/recordings.service';
+import { StorageService } from './field/storage.service';
 
 function llmProvider(config: AppConfig): LlmProvider {
   const kind = config.AI_PROVIDER ?? (config.ANTHROPIC_API_KEY ? 'anthropic' : 'none');
@@ -99,6 +103,7 @@ export class AppModule implements NestModule {
         HealthController, AuthController, TenantController, TeamController, InvitationsController, AuditController,
         CrmSettingsController, AccountsController, ContactsNotesController, OpportunitiesController, TasksController,
         VisitsController, ImportsController, ReportsController, AiController, BrainController, ApprovalsController,
+        FieldController, RecordingsController,
       ],
       providers: [
         DbService, PasswordService, SessionService, MailService, AuditService, SecurityService,
@@ -107,7 +112,9 @@ export class AppModule implements NestModule {
         ImportsService, ReportsService,
         { provide: LLM_PROVIDER, useValue: llmProvider(config) },
         AiRuntimeService, ToolGatewayService, AiSettingsService, BrainService, AgentsService, MessagingService,
+        StorageService, RecordingsService,
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
+        { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
         // Order matters: rate limit -> CSRF -> session -> permission.
         { provide: APP_GUARD, useClass: ThrottlerGuard },
         { provide: APP_GUARD, useClass: CsrfGuard },

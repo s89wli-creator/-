@@ -190,6 +190,8 @@ export const geoSchema = z.object({
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
   accuracyM: z.number().min(0).max(100_000).optional(),
+  /** When the action really happened (set by the field app when it was recorded offline). */
+  occurredAt: z.string().datetime({ offset: true }).optional(),
 });
 
 export const visitOutcomeSchema = z.object({
@@ -198,6 +200,7 @@ export const visitOutcomeSchema = z.object({
   nextStep: z.enum(NEXT_STEPS),
   nextFollowUpAt: z.string().datetime({ offset: true }).nullable().optional(),
   notes: optText(5000),
+  occurredAt: z.string().datetime({ offset: true }).optional(),
 });
 export type VisitOutcomeInput = z.infer<typeof visitOutcomeSchema>;
 
@@ -236,3 +239,21 @@ export const importMappingSchema = z.object({
 export type ImportMappingInput = z.infer<typeof importMappingSchema>;
 
 export const importRowResolutionSchema = z.object({ resolution: z.enum(['create', 'merge', 'skip']) });
+
+// ---------------------------------------------------------------- Phase 5: visit recordings
+
+export const RECORDING_MIME_TYPES = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/aac', 'audio/x-m4a'] as const;
+export const RECORDING_CHUNK_BYTES = 1024 * 1024;
+export const RECORDING_MAX_BYTES = 50 * 1024 * 1024;
+export const recordingStartSchema = z.object({
+  mimeType: z.string().trim().max(60).transform((m) => m.split(';')[0]!.toLowerCase()).pipe(z.enum(RECORDING_MIME_TYPES)),
+  totalChunks: z.number().int().min(1).max(50),
+  durationSec: z.number().int().min(1).max(3600).optional(),
+  consent: z.literal(true),
+});
+export const transcriptSchema = z.object({ transcript: z.string().trim().min(1).max(20_000) });
+export interface RecordingDto {
+  id: string; visitId: string; mimeType: string; status: 'uploading' | 'ready' | 'deleted'; totalChunks: number; receivedChunks: number[];
+  sizeBytes: number; durationSec: number | null; transcript: string | null; transcriptStatus: string; uploadedByName: string | null;
+  deleteAfter: string; createdAt: string;
+}

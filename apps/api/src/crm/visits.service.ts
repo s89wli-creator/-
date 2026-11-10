@@ -21,6 +21,16 @@ const FOLLOW_UP_TITLE: Record<string, { title: string; type: string }> = {
   none: { title: 'متابعة العميل', type: 'follow_up' },
 };
 
+/** Offline actions keep their real time, within a bounded window (no back-dating beyond 72h, no future). */
+export function occurredAt(value: string | undefined, now = new Date()): Date {
+  if (!value) return now;
+  const d = new Date(value);
+  if (d.getTime() > now.getTime() + 2 * 60_000 || d.getTime() < now.getTime() - 72 * 3600_000) {
+    throw badRequest('INVALID_OCCURRED_AT', 'The action time must be within the last 72 hours');
+  }
+  return d;
+}
+
 @Injectable()
 export class VisitsService {
   constructor(
@@ -142,7 +152,8 @@ export class VisitsService {
   }
 
   /** GPS is optional evidence only — a visit is never "proven" by location alone. */
-  checkIn(auth: TenantAuthContext, id: string, geo: { lat?: number; lng?: number; accuracyM?: number }, meta: RequestMeta): Promise<VisitDto> {
+  checkIn(auth: TenantAuthContext, id: string, geo: { lat?: number; lng?: number; accuracyM?: number; occurredAt?: string }, meta: RequestMeta): Promise<VisitDto> {
+    const at = occurredAt(geo.occurredAt);
     return this.db.tenant(auth, async (tx) => {
       const scope = await this.scopes.forRequest(tx, auth);
       const v = await this.load(tx, auth, scope, id, true);
@@ -150,9 +161,9 @@ export class VisitsService {
       if (v.status !== 'scheduled') throw new AppError(409, 'INVALID_STATE', 'Visit already started or closed');
       await tx
         .update(visits)
-        .set({ status: 'in_progress', checkInAt: new Date(), checkInLat: geo.lat ?? null, checkInLng: geo.lng ?? null, checkInAccuracyM: geo.accuracyM ?? null, updatedAt: new Date() })
+        .set({ status: 'in_progress', checkInAt: at, checkInLat: geo.lat ?? null, checkInLng: geo.lng ?? null, checkInAccuracyM: geo.accuracyM ?? null, updatedAt: new Date() })
         .where(and(eq(visits.tenantId, auth.tenantId), eq(visits.id, id)));
-      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'visit.check_in', entityType: 'visit', entityId: id, after: { withLocation: geo.lat !== undefined }, meta });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'visit.check_in', entityType: 'visit', entityId: id, after: { withLocation: geo.lat !== undefined, recordedOffline: !!geo.occurredAt }, meta });
       return this.one(tx, auth.tenantId, id);
     });
   }
@@ -166,7 +177,8 @@ export class VisitsService {
       const scope = await this.scopes.forRequest(tx, auth);
       const v = await this.load(tx, auth, scope, id, true);
       if (v.status === 'completed' || v.status === 'cancelled') throw new AppError(409, 'INVALID_STATE', 'Visit already closed');
-      const now = new Date();
+      let now = occurredAt(input.occurredAt);
+      if (v.checkInAt && now < v.checkInAt) now = v.checkInAt;
       let followUpTaskId: string | null = null;
       if (input.nextFollowUpAt) {
         const f = FOLLOW_UP_TITLE[input.nextStep] ?? FOLLOW_UP_TITLE.none!;
@@ -180,14 +192,14 @@ export class VisitsService {
         .set({
           status: 'completed', checkInAt: v.checkInAt ?? now, checkOutAt: now, checkOutLat: input.lat ?? null, checkOutLng: input.lng ?? null,
           outcome: input.outcome, interestLevel: input.interestLevel ?? null, nextStep: input.nextStep,
-          nextFollowUpAt: input.nextFollowUpAt ? new Date(input.nextFollowUpAt) : null, notes: input.notes ?? null, followUpTaskId, updatedAt: now,
+          nextFollowUpAt: input.nextFollowUpAt ? new Date(input.nextFollowUpAt) : null, notes: input.notes ?? null, followUpTaskId, updatedAt: new Date(),
         })
         .where(and(eq(visits.tenantId, auth.tenantId), eq(visits.id, id)));
       await this.activity.record(tx, { tenantId: auth.tenantId, accountId: v.accountId, opportunityId: v.opportunityId, type: 'visit_completed', actorUserId: auth.userId, refType: 'visit', refId: id, summary: input.notes ?? input.outcome });
       if (v.opportunityId && input.outcome !== 'not_met') {
         await this.opps.advanceOnEvent(tx, auth, v.opportunityId, 'visit_done', { visitId: id, event: 'visit_completed', outcome: input.outcome });
       }
-      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'visit.complete', entityType: 'visit', entityId: id, after: { outcome: input.outcome, nextStep: input.nextStep, followUpTaskId }, meta });
+      await this.audit.record(tx, { tenantId: auth.tenantId, actorUserId: auth.userId, action: 'visit.complete', entityType: 'visit', entityId: id, after: { outcome: input.outcome, nextStep: input.nextStep, followUpTaskId, recordedOffline: !!input.occurredAt }, meta });
       return this.one(tx, auth.tenantId, id);
     });
   }

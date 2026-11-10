@@ -34,6 +34,8 @@ export const tenantSettingsSchema = z.object({
     .object({
       repVisibility: z.enum(['assigned_only', 'all']).optional(),
       recordingEnabled: z.boolean().optional(),
+      /** Days before voice recordings are deleted automatically. */
+      recordingRetentionDays: z.number().int().min(7).max(365).optional(),
       sessionIdleHours: z.number().int().min(1).max(72).optional(),
     })
     .optional(),

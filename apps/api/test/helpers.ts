@@ -18,6 +18,7 @@ export function testConfig(overrides: Record<string, string> = {}): AppConfig {
     AUTH_RATE_LIMIT_PER_MINUTE: '100000',
     WEB_ORIGIN: 'http://localhost:3000',
     AI_PROVIDER: 'fake',
+    STORAGE_DIR: process.env.TEST_STORAGE_DIR ?? '/tmp/rakan-test-storage',
     ...overrides,
   });
 }
@@ -76,6 +77,9 @@ export class TestClient {
   }
   put(url: string, body?: object) {
     return this.agent.put(`/api${url}`).set('x-csrf-token', this.csrf).send(body ?? {});
+  }
+  putRaw(url: string, data: Buffer) {
+    return this.agent.put(`/api${url}`).set('x-csrf-token', this.csrf).set('content-type', 'application/octet-stream').send(data);
   }
   delete(url: string) {
     return this.agent.delete(`/api${url}`).set('x-csrf-token', this.csrf);

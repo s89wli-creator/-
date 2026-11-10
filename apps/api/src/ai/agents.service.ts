@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { accounts, leadScores, meetingInsights, visitBriefs, type Tx } from '@rakan/db';
+import { accounts, leadScores, meetingInsights, visitBriefs, visitRecordings, type Tx } from '@rakan/db';
 import {
   SCORING_CRITERIA, normalizeArabic,
   type Evidence, type LeadScoreDto, type MeetingInsightsDto, type ScoringCriterion, type VisitBriefDto,
@@ -299,6 +299,15 @@ export class AgentsService {
 
   // ================================================================ Meeting intelligence
 
+  /** Voice-note transcripts of the visit (manual or automatic), read directly to keep modules decoupled. */
+  private async transcripts(tx: Tx, tenantId: string, visitId: string): Promise<string[]> {
+    const rows = await tx
+      .select({ t: visitRecordings.transcript })
+      .from(visitRecordings)
+      .where(and(eq(visitRecordings.tenantId, tenantId), eq(visitRecordings.visitId, visitId), eq(visitRecordings.status, 'ready')));
+    return rows.map((r) => r.t).filter((t): t is string => !!t);
+  }
+
   /** Quote check: a "stated fact" must be copied from the notes (Arabic-normalized substring). */
   static quoteFound(notes: string, quote: string): boolean {
     const q = normalizeArabic(quote);
@@ -310,7 +319,8 @@ export class AgentsService {
       const scope = await this.scopes.forRequest(tx, auth);
       const v = await this.visitsSvc.load(tx, auth, scope, visitId);
       if (v.status !== 'completed') throw new AppError(409, 'VISIT_NOT_COMPLETED', 'Record the visit outcome first');
-      const notesText = redactPii(v.notes ?? '');
+      const transcripts = await this.transcripts(tx, auth.tenantId, visitId);
+      const notesText = redactPii([v.notes ?? '', ...transcripts].filter(Boolean).join('\n\n'));
       if (notesText.trim().length < 20) throw new AppError(422, 'NOT_ENOUGH_NOTES', 'Write the meeting notes first');
       const a = await this.accountsSvc.loadAccount(tx, auth, { ...scope, readAll: true, restricted: false }, v.accountId);
       return { v, a, notesText };

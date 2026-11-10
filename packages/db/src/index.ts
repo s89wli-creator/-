@@ -6,3 +6,4 @@ export { runMigrations, MIGRATIONS_DIR } from './migrator';
 export { setupDevDatabase } from './dev-setup';
 export * from './schema-crm';
 export * from './schema-ai';
+export * from './schema-field';

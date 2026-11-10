@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { IS_PUBLIC, PERMISSION, TENANT_ISOLATION_EXEMPT } from '../src/common/decorators';
 import { aiProbes, createAiFixtures, type AiFixtures } from './ai-probes';
 import { crmProbes, createCrmFixtures, type CrmFixtures } from './crm-probes';
+import { createFieldFixtures, fieldProbes, sharedIdempotencyKeyProbe, type FieldFixtures } from './field-probes';
 import { addMember, ownerQuery, registerCompany, resetDb, startApp, type TestClient } from './helpers';
 
 /**
@@ -21,6 +22,7 @@ let tenantB: string;
 const B: { memberId: string; territoryId: string; invitationId: string } = { memberId: '', territoryId: '', invitationId: '' };
 let crm: CrmFixtures;
 let ai: AiFixtures;
+let field: FieldFixtures;
 
 beforeAll(async () => {
   app = await startApp();
@@ -33,6 +35,7 @@ beforeAll(async () => {
   B.invitationId = (await b.post('/team/invitations', { email: 'pending@b.sa', role: 'rep' }).expect(201)).body.id;
   crm = await createCrmFixtures(a, b);
   ai = await createAiFixtures(app, crm);
+  field = await createFieldFixtures(crm);
 });
 afterAll(async () => app.close());
 
@@ -40,6 +43,7 @@ afterAll(async () => app.close());
 const PROBES: Record<string, () => Promise<void>> = {
   ...crmProbes(() => crm),
   ...aiProbes(() => app, () => ai),
+  ...fieldProbes(() => crm, () => field),
   'GET /api/tenant': async () => {
     const res = await a.get('/tenant').expect(200);
     expect(res.body.id).toBe(tenantA);
@@ -125,6 +129,8 @@ describe('tenant isolation (company A vs company B)', () => {
     expect(res.status).toBe(404);
     expect((await a.get('/auth/me')).body.activeTenant.id).toBe(tenantA);
   });
+
+  it('idempotency keys never return another company\'s response', () => sharedIdempotencyKeyProbe(crm, field));
 
   it('/auth/me lists only own memberships', async () => {
     const me = (await a.get('/auth/me').expect(200)).body;

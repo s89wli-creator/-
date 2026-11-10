@@ -51,6 +51,22 @@ export class FieldCryptoService {
     return Buffer.concat([decipher.update(Buffer.from(data, 'base64url')), decipher.final()]).toString('utf8');
   }
 
+  /** Binary payloads (audio files): iv(12) | tag(16) | ciphertext, bound to tenant + object key. */
+  encryptBuffer(tenantId: string, objectKey: string, data: Buffer): Buffer {
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', this.keys(tenantId).enc, iv);
+    cipher.setAAD(Buffer.from(`${tenantId}:${objectKey}`));
+    const body = Buffer.concat([cipher.update(data), cipher.final()]);
+    return Buffer.concat([iv, cipher.getAuthTag(), body]);
+  }
+
+  decryptBuffer(tenantId: string, objectKey: string, blob: Buffer): Buffer {
+    const decipher = createDecipheriv('aes-256-gcm', this.keys(tenantId).enc, blob.subarray(0, 12));
+    decipher.setAAD(Buffer.from(`${tenantId}:${objectKey}`));
+    decipher.setAuthTag(blob.subarray(12, 28));
+    return Buffer.concat([decipher.update(blob.subarray(28)), decipher.final()]);
+  }
+
   hash(tenantId: string, normalized: string | null | undefined): string | null {
     if (!normalized) return null;
     return createHmac('sha256', this.keys(tenantId).mac).update(normalized).digest('hex');

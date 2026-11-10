@@ -28,6 +28,8 @@ const envSchema = z.object({
   /** Server-side only. Never sent to the browser. */
   ANTHROPIC_API_KEY: z.string().optional(),
   AI_MODEL: z.string().default('claude-opus-5-5'),
+  /** Encrypted file storage (visit recordings). Local disk for now; an in-Kingdom object store adapter later. */
+  STORAGE_DIR: z.string().default('./var/storage'),
 });
 
 /** Development/test-only key so local setups work out of the box. Never accepted in production. */

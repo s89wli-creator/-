@@ -18,6 +18,8 @@ export async function createApp(config: AppConfig): Promise<NestExpressApplicati
   app.use(helmet());
   app.use(cookieParser());
   app.useBodyParser('json', { limit: '100kb' });
+  // Recording chunks (PUT /api/crm/recordings/:id/chunks/:n), 1 MB each.
+  app.useBodyParser('raw', { limit: '1100kb', type: 'application/octet-stream' });
   app.enableCors({ origin: config.WEB_ORIGIN, credentials: true });
   app.setGlobalPrefix('api');
   app.enableShutdownHooks();
