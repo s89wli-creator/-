@@ -111,7 +111,7 @@ export function crmProbes(f: () => CrmFixtures): Record<string, () => Promise<vo
     },
     'POST /api/crm/accounts/:id/contacts': async () => {
       await f().a.post(`/crm/accounts/${f().B.accountId}/contacts`, { fullName: 'دخيل' }).expect(404);
-      expect((await one('SELECT count(*)::int AS n FROM contacts WHERE account_id = $1', [f().B.accountId]))!.n).toBe(1);
+      expect((await one("SELECT count(*)::int AS n FROM contacts WHERE account_id = $1 AND full_name = 'دخيل'", [f().B.accountId]))!.n).toBe(0);
     },
     'PATCH /api/crm/contacts/:id': async () => {
       await f().a.patch(`/crm/contacts/${f().B.contactId}`, { fullName: 'hacked' }).expect(404);

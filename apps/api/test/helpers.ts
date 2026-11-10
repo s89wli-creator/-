@@ -17,6 +17,7 @@ export function testConfig(overrides: Record<string, string> = {}): AppConfig {
     RATE_LIMIT_PER_MINUTE: '100000',
     AUTH_RATE_LIMIT_PER_MINUTE: '100000',
     WEB_ORIGIN: 'http://localhost:3000',
+    AI_PROVIDER: 'fake',
     ...overrides,
   });
 }

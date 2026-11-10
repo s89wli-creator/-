@@ -56,7 +56,7 @@ export class VisitsService {
     return (await this.dtos(tx, tenantId, eq(visits.id, id)))[0]!;
   }
 
-  private async load(tx: Tx, auth: TenantAuthContext, scope: RecordScope, id: string, write = false): Promise<VisitRow> {
+  async load(tx: Tx, auth: TenantAuthContext, scope: RecordScope, id: string, write = false): Promise<VisitRow> {
     const [v] = await tx.select().from(visits).where(and(eq(visits.tenantId, auth.tenantId), eq(visits.id, id)));
     if (!v) throw notFound('Visit');
     if (scope.restricted && v.repMembershipId !== scope.membershipId) {

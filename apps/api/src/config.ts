@@ -23,6 +23,11 @@ const envSchema = z.object({
     .refine((v) => Buffer.from(v, 'base64').length === 32, 'must be 32 bytes, base64-encoded')
     .optional(),
   IMPORT_MAX_ROWS: z.coerce.number().int().min(1).max(50_000).default(5000),
+  /** AI provider. Defaults to "anthropic" when ANTHROPIC_API_KEY is set, otherwise AI features are off ("none"). */
+  AI_PROVIDER: z.enum(['anthropic', 'fake', 'none']).optional(),
+  /** Server-side only. Never sent to the browser. */
+  ANTHROPIC_API_KEY: z.string().optional(),
+  AI_MODEL: z.string().default('claude-opus-5-5'),
 });
 
 /** Development/test-only key so local setups work out of the box. Never accepted in production. */
@@ -46,6 +51,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (!parsed.data.DATA_ENCRYPTION_KEY || parsed.data.DATA_ENCRYPTION_KEY === DEV_ENCRYPTION_KEY) {
       throw new Error('Production requires a unique DATA_ENCRYPTION_KEY');
     }
+    if (parsed.data.AI_PROVIDER === 'fake') throw new Error('AI_PROVIDER=fake is for tests only');
   }
   return parsed.data;
 }

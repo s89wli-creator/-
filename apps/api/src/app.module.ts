@@ -37,6 +37,22 @@ import { CrmSettingsService } from './crm/settings.service';
 import { TasksService } from './crm/tasks.service';
 import { VisitsService } from './crm/visits.service';
 import { TenantService } from './tenancy/tenant.service';
+import { AgentsService } from './ai/agents.service';
+import { AiController, ApprovalsController, BrainController } from './ai/ai.controller';
+import { AiSettingsService } from './ai/ai-settings.service';
+import { AnthropicProvider } from './ai/anthropic.provider';
+import { BrainService } from './ai/brain.service';
+import { FakeProvider } from './ai/fake.provider';
+import { LLM_PROVIDER, type LlmProvider } from './ai/llm';
+import { MessagingService } from './ai/messaging.service';
+import { AiRuntimeService } from './ai/runtime.service';
+import { ToolGatewayService } from './ai/tool-gateway.service';
+
+function llmProvider(config: AppConfig): LlmProvider {
+  const kind = config.AI_PROVIDER ?? (config.ANTHROPIC_API_KEY ? 'anthropic' : 'none');
+  if (kind === 'fake') return new FakeProvider();
+  return new AnthropicProvider(kind === 'anthropic' ? config.ANTHROPIC_API_KEY : undefined, config.AI_MODEL);
+}
 
 @Global()
 @Module({})
@@ -82,13 +98,15 @@ export class AppModule implements NestModule {
       controllers: [
         HealthController, AuthController, TenantController, TeamController, InvitationsController, AuditController,
         CrmSettingsController, AccountsController, ContactsNotesController, OpportunitiesController, TasksController,
-        VisitsController, ImportsController, ReportsController,
+        VisitsController, ImportsController, ReportsController, AiController, BrainController, ApprovalsController,
       ],
       providers: [
         DbService, PasswordService, SessionService, MailService, AuditService, SecurityService,
         AuthService, TenantService, TeamService, TerritoryService, FieldCryptoService,
         ScopeService, ActivityService, CrmSettingsService, AccountsService, OpportunitiesService, TasksService, VisitsService,
         ImportsService, ReportsService,
+        { provide: LLM_PROVIDER, useValue: llmProvider(config) },
+        AiRuntimeService, ToolGatewayService, AiSettingsService, BrainService, AgentsService, MessagingService,
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         // Order matters: rate limit -> CSRF -> session -> permission.
         { provide: APP_GUARD, useClass: ThrottlerGuard },
