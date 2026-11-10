@@ -7,6 +7,7 @@ import type { AccountDto, ActivityDto, ContactDto, NoteDto, OpportunityDto, Task
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { FollowUpPanel, LeadScorePanel } from '@/components/ai/panels';
 import { AccountForm } from '@/components/crm/AccountForm';
 import { ContactForm, MoveStageForm, OpportunityForm, TaskForm, VisitForm } from '@/components/crm/forms';
 import {
@@ -19,7 +20,7 @@ import { useCrmSettings } from '@/lib/crm';
 import type { MessageKey } from '@/lib/i18n';
 import { useCan, useI18n, useInvalidate, useMe } from '@/lib/providers';
 
-type Tab = 'overview' | 'contacts' | 'opportunities' | 'visits' | 'tasks' | 'notes' | 'timeline';
+type Tab = 'overview' | 'ai' | 'contacts' | 'opportunities' | 'visits' | 'tasks' | 'notes' | 'timeline';
 
 export default function AccountPage() {
   const confirm = useConfirm();
@@ -91,6 +92,7 @@ export default function AccountPage() {
 
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: 'overview', label: t('accounts.tab.overview') },
+    ...(can('ai.use') ? [{ id: 'ai' as Tab, label: t('accounts.tab.ai') }] : []),
     { id: 'contacts', label: t('accounts.tab.contacts'), count: contacts.data?.length },
     { id: 'opportunities', label: t('accounts.tab.opportunities'), count: opps.data?.length },
     { id: 'visits', label: t('accounts.tab.visits'), count: visits.data?.length },
@@ -300,6 +302,13 @@ export default function AccountPage() {
             <EmptyState>{t('notes.empty')}</EmptyState>
           )}
         </Card>
+      )}
+
+      {tab === 'ai' && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <LeadScorePanel accountId={a.id} canWrite={canWrite} />
+          <FollowUpPanel accountId={a.id} contacts={contacts.data ?? []} canWrite={canWrite} />
+        </div>
       )}
 
       {tab === 'timeline' && (

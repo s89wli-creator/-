@@ -5,7 +5,7 @@ import type { SecurityDto } from '@rakan/shared';
 import { useState, type FormEvent } from 'react';
 import { useConfirm, useToast } from '@/components/feedback';
 import { Icon } from '@/components/icons';
-import { Alert, Badge, Button, Card, ErrorState, Field, Input, LoadingState, Modal, PageHeader, SectionTitle, formatDate } from '@/components/ui';
+import { Alert, Badge, Button, Card, ErrorState, Field, Input, LoadingState, Modal, PageHeader, CardHeading, formatDate } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/providers';
 
@@ -72,9 +72,9 @@ export default function SecurityPage() {
       <PageHeader title={t('security.title')} subtitle={t('security.subtitle')} />
       <div className="space-y-5">
         <Card className="p-5 sm:p-6">
-          <SectionTitle action={<Badge tone={d.mfaEnabled ? 'success' : 'neutral'} dot>{t(d.mfaEnabled ? 'security.mfa.on' : 'security.mfa.off')}</Badge>}>
+          <CardHeading action={<Badge tone={d.mfaEnabled ? 'success' : 'neutral'} dot>{t(d.mfaEnabled ? 'security.mfa.on' : 'security.mfa.off')}</Badge>}>
             {t('security.mfa.title')}
-          </SectionTitle>
+          </CardHeading>
           <p className="mb-4 text-fg-sub">{t('security.mfa.desc')}</p>
           {d.mfaEnabled ? (
             <Button variant="secondary" onClick={() => { disable.reset(); setDisableOpen(true); }}>{t('security.mfa.disable')}</Button>
@@ -84,9 +84,9 @@ export default function SecurityPage() {
         </Card>
 
         <Card className="p-5 sm:p-6">
-          <SectionTitle action={<Badge tone={d.emailVerified ? 'success' : 'warn'} dot>{t(d.emailVerified ? 'security.email.verified' : 'security.email.unverified')}</Badge>}>
+          <CardHeading action={<Badge tone={d.emailVerified ? 'success' : 'warn'} dot>{t(d.emailVerified ? 'security.email.verified' : 'security.email.unverified')}</Badge>}>
             {t('security.email.title')}
-          </SectionTitle>
+          </CardHeading>
           {!d.emailVerified && (
             <div className="space-y-3">
               <p className="text-fg-sub">{t('security.email.banner')}</p>
@@ -99,7 +99,7 @@ export default function SecurityPage() {
         </Card>
 
         <Card className="p-5 sm:p-6">
-          <SectionTitle>{t('security.sessions.title')}</SectionTitle>
+          <CardHeading>{t('security.sessions.title')}</CardHeading>
           {revoke.error && <Alert tone="error">{err(revoke.error)}</Alert>}
           <ul className="divide-y divide-line-soft">
             {d.sessions.map((s) => (

@@ -158,6 +158,16 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
   );
 }
 
+/** Heading inside an already padded card (SectionTitle is for edge-to-edge card headers). */
+export function CardHeading({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="mb-3 flex items-center justify-between gap-3">
+      <h2 className="text-base font-semibold">{children}</h2>
+      {action}
+    </div>
+  );
+}
+
 type Tone = 'neutral' | 'brand' | 'warn' | 'muted' | 'success' | 'danger';
 export function Badge({ children, tone = 'neutral', dot }: { children: ReactNode; tone?: Tone; dot?: boolean }) {
   const tones: Record<Tone, string> = {

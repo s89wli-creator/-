@@ -5,6 +5,7 @@ import { NEXT_STEPS, VISIT_OUTCOMES, type VisitDto } from '@rakan/shared';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { MeetingInsightsPanel, VisitBriefPanel } from '@/components/ai/panels';
 import { Alert, BackLink, Badge, Button, Card, ErrorState, Field, LoadingState, Textarea, cx, formatDate, formatTime } from '@/components/ui';
 import { useConfirm, useToast } from '@/components/feedback';
 import { api } from '@/lib/api';
@@ -192,6 +193,13 @@ export default function VisitPage() {
           {v.notes && <p className="whitespace-pre-wrap border-t border-line-soft pt-2">{v.notes}</p>}
           {v.followUpTaskId && <Alert tone="success">{t('visits.followUpCreated')}</Alert>}
         </Card>
+      )}
+
+      {can('ai.use') && v.status !== 'cancelled' && (
+        <div className="mt-4 space-y-4">
+          {v.status !== 'completed' && <VisitBriefPanel visitId={v.id} />}
+          {v.status === 'completed' && <MeetingInsightsPanel visitId={v.id} />}
+        </div>
       )}
 
       {v.status === 'scheduled' && writable && (
