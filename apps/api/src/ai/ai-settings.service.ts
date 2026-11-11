@@ -61,19 +61,22 @@ export class AiSettingsService {
     const usage = await this.usage(auth);
     return this.db.tenant(auth, async (tx) => {
       const s = await this.runtime.settings(tx, auth.tenantId);
-      return { enabled: s.enabled, monthlyBudgetUsd: s.monthlyBudgetUsd, agents: s.agents, usage, scoring: await this.scoring(tx, auth.tenantId) };
+      return { enabled: s.enabled, voiceEnabled: s.voiceEnabled, monthlyBudgetUsd: s.monthlyBudgetUsd, agents: s.agents, usage, scoring: await this.scoring(tx, auth.tenantId) };
     });
   }
 
   async update(
     auth: TenantAuthContext,
-    input: { enabled?: boolean; monthlyBudgetUsd?: number; agents?: Partial<Record<string, { enabled: boolean }>> },
+    input: { enabled?: boolean; monthlyBudgetUsd?: number; agents?: Partial<Record<string, { enabled: boolean }>>; voiceEnabled?: boolean },
     meta: RequestMeta,
   ): Promise<AiSettingsDto> {
     await this.db.tenant(auth, async (tx) => {
       const before = await this.runtime.settings(tx, auth.tenantId);
       const agents = { ...before.agents, ...(input.agents ?? {}) };
-      const next = { enabled: input.enabled ?? before.enabled, monthlyBudgetUsd: input.monthlyBudgetUsd ?? before.monthlyBudgetUsd, agents };
+      const next = {
+        enabled: input.enabled ?? before.enabled, monthlyBudgetUsd: input.monthlyBudgetUsd ?? before.monthlyBudgetUsd, agents,
+        voiceEnabled: input.voiceEnabled ?? before.voiceEnabled,
+      };
       await tx
         .insert(aiSettings)
         .values({ tenantId: auth.tenantId, ...next, updatedAt: new Date() })

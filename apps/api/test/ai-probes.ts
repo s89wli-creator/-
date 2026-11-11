@@ -166,6 +166,20 @@ export function aiProbes(app: () => INestApplication, f: () => AiFixtures): Reco
       expect(JSON.stringify((await f().a.get('/ai/assistant/conversations').expect(200)).body)).not.toContain(f().B.conversationId);
     },
     'GET /api/ai/assistant/conversations/:id': async () => notFound(f().a.get(`/ai/assistant/conversations/${f().B.conversationId}`)),
+    'POST /api/ai/assistant/messages/:id/speech': async () => {
+      const reply = await one("SELECT id FROM assistant_messages WHERE conversation_id=$1 AND role='assistant'", [f().B.conversationId]);
+      await notFound(f().a.post(`/ai/assistant/messages/${reply!.id}/speech`));
+    },
+    'POST /api/ai/assistant/transcribe': async () => {
+      await f().a.postRaw('/ai/assistant/transcribe', Buffer.alloc(20_000, 1), { 'x-audio-type': 'audio/webm' }).expect(200);
+      // Billed to the caller's company only.
+      const rows = await ownerQuery<{ tenant_id: string }>("SELECT DISTINCT tenant_id FROM ai_usage WHERE model LIKE 'stt:%'");
+      expect(rows).toHaveLength(1);
+      expect((await one("SELECT count(*)::int AS n FROM ai_usage WHERE model LIKE 'stt:%' AND tenant_id = (SELECT tenant_id FROM assistant_conversations WHERE id=$1)", [f().B.conversationId]))!.n).toBe(0);
+    },
+    'GET /api/ai/voice/status': async () => {
+      await f().a.get('/ai/voice/status').expect(200);
+    },
     'GET /api/approvals': async () => {
       expect(JSON.stringify((await f().a.get('/approvals').expect(200)).body)).not.toContain(f().B.approvalId);
     },

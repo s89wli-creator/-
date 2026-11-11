@@ -57,6 +57,15 @@ import { StorageService } from './field/storage.service';
 import { PlanService } from './platform/plan.service';
 import { PlatformController, TenantPlanController } from './platform/platform.controller';
 import { PlatformService } from './platform/platform.service';
+import { PlatformVoiceController, VoiceController } from './voice/voice.controller';
+import { ElevenLabsProvider, FakeVoiceProvider, VOICE_PROVIDER, type VoiceProvider } from './voice/voice.provider';
+import { VoiceService } from './voice/voice.service';
+
+function voiceProvider(config: AppConfig): VoiceProvider {
+  const kind = config.VOICE_PROVIDER ?? (config.ELEVENLABS_API_KEY ? 'elevenlabs' : 'none');
+  if (kind === 'fake') return new FakeVoiceProvider();
+  return new ElevenLabsProvider(kind === 'elevenlabs' ? config.ELEVENLABS_API_KEY : undefined, config.ELEVENLABS_TTS_MODEL, config.ELEVENLABS_STT_MODEL);
+}
 
 function llmProvider(config: AppConfig): LlmProvider {
   const kind = config.AI_PROVIDER ?? (config.ANTHROPIC_API_KEY ? 'anthropic' : 'none');
@@ -109,7 +118,7 @@ export class AppModule implements NestModule {
         HealthController, AuthController, TenantController, TeamController, InvitationsController, AuditController,
         CrmSettingsController, AccountsController, ContactsNotesController, OpportunitiesController, TasksController,
         VisitsController, ImportsController, ReportsController, AttentionController, AiController, BrainController, ApprovalsController, ProspectingController, AssistantController,
-        FieldController, RecordingsController, PlatformController, TenantPlanController,
+        FieldController, RecordingsController, PlatformController, TenantPlanController, VoiceController, PlatformVoiceController,
       ],
       providers: [
         DbService, PasswordService, SessionService, MailService, AuditService, SecurityService,
@@ -119,6 +128,7 @@ export class AppModule implements NestModule {
         { provide: LLM_PROVIDER, useValue: llmProvider(config) },
         AiRuntimeService, ToolGatewayService, AiSettingsService, BrainService, AgentsService, MessagingService,
         StorageService, RecordingsService, PlanService, PlatformService, AttentionService, ProspectingService, AssistantService,
+        { provide: VOICE_PROVIDER, useValue: voiceProvider(config) }, VoiceService,
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
         // Order matters: rate limit -> CSRF -> session -> permission.

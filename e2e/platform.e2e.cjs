@@ -84,6 +84,19 @@ async function register(browser, company, email) {
   await ops.getByText('تعديل باقة').first().waitFor();
   log('plan edited and logged');
 
+  // Spokesperson voice: honest "not configured" without a provider key; nothing can be recorded or sent
+  await ops.goto(BASE + '/platform/voice');
+  await ops.getByRole('heading', { name: 'صوت راكان الرسمي' }).waitFor();
+  await ops.getByText('لم يُضبط مفتاح مزود الصوت').waitFor();
+  await ops.getByText('أقرّ بأن هذا التسجيل بصوتي أنا').waitFor();
+  assert(await ops.getByRole('button', { name: 'ابدأ التسجيل' }).isDisabled(), 'recording must be disabled without a voice provider');
+  assert(await ops.getByRole('button', { name: 'إنشاء الصوت' }).isDisabled(), 'create must be disabled without a voice provider');
+  await ops.screenshot({ path: `${OUT}/platform-04-voice.png`, fullPage: true });
+  await acme.goto(BASE + '/platform/voice');
+  await acme.getByText('هذه الصفحة لفريق تشغيل راكان فقط.').first().waitFor();
+  assert((await acme.getByText('أقرّ بأن هذا التسجيل بصوتي أنا').count()) === 0, 'voice page leaked to a company user');
+  log('voice setup page (not configured)');
+
   // The company's own view of its plan
   await acme.goto(BASE + '/settings/billing');
   await acme.getByRole('heading', { name: 'الباقة والاستهلاك' }).waitFor();

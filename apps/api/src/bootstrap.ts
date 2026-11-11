@@ -18,6 +18,12 @@ export async function createApp(config: AppConfig): Promise<NestExpressApplicati
   app.use(helmet());
   app.use(cookieParser());
   app.useBodyParser('json', { limit: '100kb' });
+  // Spokesperson voice sample (platform console only), up to 12 MB. Registered first so it wins for this path.
+  app.useBodyParser('raw', {
+    limit: '12mb',
+    type: (req: { url?: string; headers: Record<string, unknown> }) =>
+      req.headers['content-type'] === 'application/octet-stream' && (req.url ?? '').split('?')[0] === '/api/platform/voice',
+  });
   // Recording chunks (PUT /api/crm/recordings/:id/chunks/:n), 1 MB each.
   app.useBodyParser('raw', { limit: '1100kb', type: 'application/octet-stream' });
   app.enableCors({ origin: config.WEB_ORIGIN, credentials: true });

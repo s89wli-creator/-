@@ -154,3 +154,21 @@ export function syncOutbox(): Promise<{ sent: number; failed: number }> {
   })();
   return syncing;
 }
+
+/**
+ * POST a binary body (audio). Returns the raw response on success; API errors are thrown as ApiError.
+ * Not queued offline: voice needs the network.
+ */
+export async function apiBinary(path: string, body: Blob | undefined, headers: Record<string, string> = {}): Promise<Response> {
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, {
+      method: 'POST', credentials: 'same-origin', body,
+      headers: { 'x-csrf-token': await csrfToken(), ...(body ? { 'content-type': 'application/octet-stream' } : {}), ...headers },
+    });
+  } catch {
+    throw new ApiError(0, 'NETWORK', 'Network error');
+  }
+  if (!res.ok) await parse(res);
+  return res;
+}

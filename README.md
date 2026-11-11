@@ -72,6 +72,7 @@ pnpm build && pnpm dev
 - رسائل البريد (الدعوات واستعادة كلمة المرور): http://localhost:8025
 - لوحة إدارة المنصة: `pnpm platform:grant <email>` ثم افتح http://localhost:3000/platform
 - الذكاء الاصطناعي: ضع `ANTHROPIC_API_KEY` في `.env` (في الخادم فقط). بدونه تعمل المنصة وتظهر المساعدات كـ"غير مفعّلة".
+- صوت راكان: ضع `ELEVENLABS_API_KEY` في `.env`، ثم سجّل الصوت من http://localhost:3000/platform/voice (التفاصيل والتكلفة في `docs/15-voice.md`).
 
 ## الاختبارات
 

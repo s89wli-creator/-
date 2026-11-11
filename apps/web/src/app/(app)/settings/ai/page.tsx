@@ -10,6 +10,7 @@ import {
 import { api } from '@/lib/api';
 import { errorMessage, type MessageKey } from '@/lib/i18n';
 import { useCan, useI18n, useInvalidate } from '@/lib/providers';
+import { useVoiceStatus } from '@/lib/voice';
 
 const usd = (n: number) => `$${n.toFixed(n < 1 ? 3 : 2)}`;
 
@@ -50,7 +51,8 @@ export default function AiSettingsPage() {
     invalidate('ai-settings');
     invalidate('ai-status');
   };
-  const update = useMutation({ mutationFn: (body: object) => api<AiSettingsDto>('/ai/settings', { method: 'PATCH', body }), onSuccess: saved });
+  const update = useMutation({ mutationFn: (body: object) => api<AiSettingsDto>('/ai/settings', { method: 'PATCH', body }), onSuccess: () => { saved(); void voice.refetch(); } });
+  const voice = useVoiceStatus(can('ai.use'));
   const scoring = useMutation({
     mutationFn: (body: object) => api<AiSettingsDto>('/ai/scoring', { method: 'PUT', body }),
     onSuccess: () => {
@@ -122,6 +124,19 @@ export default function AiSettingsPage() {
               </li>
             ))}
           </ul>
+        </Card>
+
+        <Card className="p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="font-semibold">{t('voice.settings.title')}</h2>
+              <p className="text-sm text-fg-muted">{t('voice.settings.hint')}</p>
+              {voice.data && !voice.data.providerReady && <p className="mt-1 text-sm text-warn">{t('voice.settings.notReady')}</p>}
+              {voice.data?.providerReady && !voice.data.voiceConfigured && <p className="mt-1 text-sm text-fg-muted">{t('voice.speakUnavailable')}</p>}
+              {voice.data && <p className="mt-1 text-xs text-fg-muted">{t('voice.costNote', { tts: voice.data.pricing.ttsUsdPer1kChars, stt: voice.data.pricing.sttUsdPerMinute })}</p>}
+            </div>
+            <Switch checked={s.voiceEnabled} label={t('voice.settings.title')} disabled={!s.enabled || !s.agents.assistant.enabled || update.isPending} onChange={(v) => update.mutate({ voiceEnabled: v })} />
+          </div>
         </Card>
 
         <Card className="p-5 sm:p-6">

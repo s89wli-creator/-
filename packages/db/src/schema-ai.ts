@@ -30,6 +30,7 @@ export const aiSettings = pgTable('ai_settings', {
   enabled: boolean('enabled').notNull().default(true),
   monthlyBudgetUsd: numeric('monthly_budget_usd', { precision: 10, scale: 2, mode: 'number' }).notNull().default(20),
   agents: jsonb('agents').$type<Record<string, { enabled?: boolean }>>().notNull().default(sql`'{}'::jsonb`),
+  voiceEnabled: boolean('voice_enabled').notNull().default(true),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 });
 

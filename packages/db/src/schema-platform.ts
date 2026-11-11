@@ -43,3 +43,17 @@ export const platformAudit = pgTable('platform_audit', {
   requestId: text('request_id'),
   createdAt: ts('created_at').notNull().default(sql`now()`),
 });
+
+/** Mirrors migrations/0008_voice.sql: the single spokesperson voice. */
+export const platformVoice = pgTable('platform_voice', {
+  id: integer('id').primaryKey().default(1),
+  provider: text('provider').notNull(),
+  voiceId: text('voice_id').notNull(),
+  displayName: text('display_name').notNull(),
+  consentStatement: text('consent_statement').notNull(),
+  consentedBy: uuid('consented_by'),
+  consentedAt: ts('consented_at').notNull().defaultNow(),
+  sampleSha256: text('sample_sha256').notNull(),
+  sampleBytes: integer('sample_bytes').notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});

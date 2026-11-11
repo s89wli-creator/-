@@ -30,6 +30,15 @@ const envSchema = z.object({
   AI_MODEL: z.string().default('claude-opus-5-5'),
   /** Encrypted file storage (visit recordings). Local disk for now; an in-Kingdom object store adapter later. */
   STORAGE_DIR: z.string().default('./var/storage'),
+  /** Voice (spokesperson voice clone, speech in/out). Defaults to "elevenlabs" when ELEVENLABS_API_KEY is set. */
+  VOICE_PROVIDER: z.enum(['elevenlabs', 'fake', 'none']).optional(),
+  /** Server-side only. Never sent to the browser. */
+  ELEVENLABS_API_KEY: z.string().optional(),
+  ELEVENLABS_TTS_MODEL: z.string().default('eleven_multilingual_v2'),
+  ELEVENLABS_STT_MODEL: z.string().default('scribe_v1'),
+  /** Approximate list prices used for budgeting (USD); adjust to your ElevenLabs plan. */
+  VOICE_TTS_USD_PER_1K_CHARS: z.coerce.number().min(0).default(0.3),
+  VOICE_STT_USD_PER_MINUTE: z.coerce.number().min(0).default(0.007),
   /** Platform console requires two-step verification (always on in production). */
   PLATFORM_ADMIN_REQUIRE_MFA: z.enum(['true', 'false']).optional().transform((v) => v === 'true'),
 });
@@ -57,6 +66,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     }
     parsed.data.PLATFORM_ADMIN_REQUIRE_MFA = true;
     if (parsed.data.AI_PROVIDER === 'fake') throw new Error('AI_PROVIDER=fake is for tests only');
+    if (parsed.data.VOICE_PROVIDER === 'fake') throw new Error('VOICE_PROVIDER=fake is for tests only');
   }
   return parsed.data;
 }

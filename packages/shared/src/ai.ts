@@ -51,6 +51,7 @@ export const aiSettingsSchema = z.object({
   enabled: z.boolean().optional(),
   monthlyBudgetUsd: z.number().min(0).max(100_000).optional(),
   agents: z.record(z.enum(AGENTS), z.object({ enabled: z.boolean() })).optional(),
+  voiceEnabled: z.boolean().optional(),
 });
 
 export const SCORING_CRITERIA = ['icp_fit', 'need_size', 'region_fit', 'buying_power', 'recurring_need', 'data_quality'] as const;
@@ -91,7 +92,7 @@ export interface BrainOverviewDto {
 
 export interface AiUsageDto { monthUsd: number; budgetUsd: number; runsThisMonth: number; enabled: boolean; providerReady: boolean }
 export interface AiSettingsDto {
-  enabled: boolean; monthlyBudgetUsd: number; agents: Record<AgentKey, { enabled: boolean }>; usage: AiUsageDto;
+  enabled: boolean; voiceEnabled: boolean; monthlyBudgetUsd: number; agents: Record<AgentKey, { enabled: boolean }>; usage: AiUsageDto;
   scoring: { weights: Record<ScoringCriterion, number>; tierThresholds: { A: number; B: number; C: number }; version: number };
 }
 export interface AgentRunDto {
@@ -181,3 +182,38 @@ export interface AssistantMessageDto {
   toolCalls: { tool: string; ok: boolean; summary: string }[]; links: { label: string; href: string }[]; createdAt: string;
 }
 export interface AssistantConversationDto { id: string; title: string; updatedAt: string; messages?: AssistantMessageDto[] }
+
+// ---------------------------------------------------------------- Voice (Rakan's spokesperson voice)
+
+/** Statement the voice owner agrees to before their voice is cloned (stored with the voice). */
+export const VOICE_CONSENT_STATEMENT =
+  'أقرّ بأن هذا التسجيل بصوتي أنا، وأوافق على استخدامه لإنشاء صوت مُولَّد بالذكاء الاصطناعي يمثّل راكان متحدثاً رسمياً داخل المنصة، وأعلم أنني أستطيع حذفه في أي وقت.';
+
+export interface VoiceStatusDto {
+  /** A voice provider key is configured on the server. */
+  providerReady: boolean;
+  /** The spokesperson voice has been set up by the platform. */
+  voiceConfigured: boolean;
+  /** The company allows voice (company setting + AI on + assistant on). */
+  enabled: boolean;
+  budgetReached: boolean;
+  /** Replies can be read aloud in the spokesperson voice. */
+  canSpeak: boolean;
+  /** Speech can be turned into text. */
+  canListen: boolean;
+  voiceName: string | null;
+  maxSeconds: number;
+  pricing: { ttsUsdPer1kChars: number; sttUsdPerMinute: number };
+}
+
+export interface PlatformVoiceDto {
+  providerReady: boolean;
+  provider: string;
+  configured: boolean;
+  displayName: string | null;
+  consentStatement: string;
+  consentedByName: string | null;
+  consentedAt: string | null;
+  sampleBytes: number | null;
+  pricing: { ttsUsdPer1kChars: number; sttUsdPerMinute: number };
+}

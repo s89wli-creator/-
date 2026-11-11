@@ -44,11 +44,12 @@ const PLATFORM_PROBES: Record<string, () => Promise<void>> = Object.fromEntries(
   [
     ['GET', '/platform/overview'], ['GET', '/platform/tenants'], ['GET', '/platform/tenants/:id'], ['PATCH', '/platform/tenants/:id/subscription'],
     ['GET', '/platform/plans'], ['POST', '/platform/plans'], ['PATCH', '/platform/plans/:id'], ['GET', '/platform/audit'],
+    ['GET', '/platform/voice'], ['POST', '/platform/voice'], ['DELETE', '/platform/voice'],
   ].map(([method, path]) => [
     `${method} /api${path}`,
     async () => {
       const url = path!.replace(':id', tenantB);
-      const res = method === 'GET' ? await a.get(url) : method === 'POST' ? await a.post(url, {}) : await a.patch(url, { status: 'suspended', reason: 'attack' });
+      const res = method === 'GET' ? await a.get(url) : method === 'POST' ? await a.post(url, {}) : method === 'DELETE' ? await a.delete(url) : await a.patch(url, { status: 'suspended', reason: 'attack' });
       expect(res.status).toBe(403);
       const [t] = await ownerQuery<{ status: string }>('SELECT status FROM tenants WHERE id = $1', [tenantB]);
       expect(t!.status).not.toBe('suspended');

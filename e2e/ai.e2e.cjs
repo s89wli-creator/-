@@ -98,6 +98,8 @@ function totp(secretB32) {
   // ---- AI settings: honest "not configured", budget editable
   await page.goto(BASE + '/settings/ai');
   await page.getByText('المساعد الذكي غير مفعّل على المنصة بعد').first().waitFor();
+  await page.getByRole('heading', { name: 'المحادثة الصوتية' }).waitFor();
+  await page.getByText('خدمة الصوت غير مفعّلة على المنصة بعد').waitFor();
   await page.fill('#ai-budget', '35');
   await page.getByRole('button', { name: 'حفظ' }).first().click();
   await toast('تم الحفظ');
@@ -124,6 +126,7 @@ function totp(secretB32) {
   await page.goto(BASE + '/assistant');
   await page.getByRole('heading', { name: 'اسأل راكان' }).waitFor();
   assert(await page.locator('#assistant-input').isDisabled(), 'chat input must be disabled without a provider');
+  assert((await page.getByRole('button', { name: 'تحدّث' }).count()) === 0, 'no microphone button without a voice provider');
   await page.goto(BASE + '/prospecting');
   await page.getByRole('heading', { name: 'عملاء جدد مقترحون' }).waitFor();
   assert(await page.getByRole('button', { name: 'ابحث عن عملاء' }).isDisabled(), 'prospecting must be disabled without a provider');

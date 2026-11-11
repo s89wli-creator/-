@@ -26,6 +26,7 @@ export interface Settings {
   enabled: boolean;
   monthlyBudgetUsd: number;
   agents: Record<AgentKey, { enabled: boolean }>;
+  voiceEnabled: boolean;
 }
 
 /** Start of the current month in Riyadh time (billing month shown to customers). */
@@ -52,7 +53,7 @@ export class AiRuntimeService {
   async settings(tx: Tx, tenantId: string): Promise<Settings> {
     const [s] = await tx.select().from(aiSettings).where(eq(aiSettings.tenantId, tenantId));
     const agents = Object.fromEntries(AGENTS.map((a) => [a, { enabled: s?.agents?.[a]?.enabled ?? true }])) as Settings['agents'];
-    return { enabled: s?.enabled ?? true, monthlyBudgetUsd: s?.monthlyBudgetUsd ?? 20, agents };
+    return { enabled: s?.enabled ?? true, monthlyBudgetUsd: s?.monthlyBudgetUsd ?? 20, agents, voiceEnabled: s?.voiceEnabled ?? true };
   }
 
   async monthSpend(tx: Tx, tenantId: string): Promise<{ usd: number; runs: number }> {
@@ -71,6 +72,19 @@ export class AiRuntimeService {
   async effectiveBudget(tenantId: string, own: number): Promise<number> {
     const cap = await this.plans.aiCap(tenantId);
     return cap === null ? own : Math.min(own, cap);
+  }
+
+  /** Voice belongs to Ask Rakan: AI on, assistant on, voice on, and the monthly budget not reached. */
+  async voiceGate(tx: Tx, tenantId: string): Promise<{ enabled: boolean; budgetReached: boolean }> {
+    const s = await this.settings(tx, tenantId);
+    const { usd } = await this.monthSpend(tx, tenantId);
+    return { enabled: s.enabled && s.agents.assistant.enabled && s.voiceEnabled, budgetReached: usd >= (await this.effectiveBudget(tenantId, s.monthlyBudgetUsd)) };
+  }
+
+  async assertVoice(tx: Tx, tenantId: string): Promise<void> {
+    const g = await this.voiceGate(tx, tenantId);
+    if (!g.enabled) throw new AppError(403, 'VOICE_DISABLED', 'Voice is turned off for this company');
+    if (g.budgetReached) throw new AppError(402, 'AI_BUDGET_EXCEEDED', 'The monthly AI budget has been reached');
   }
 
   private async assertCanSpend(tx: Tx, tenantId: string, agent: AgentKey): Promise<void> {

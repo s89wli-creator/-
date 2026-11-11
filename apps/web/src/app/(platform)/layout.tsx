@@ -15,6 +15,7 @@ const NAV: { href: string; label: MessageKey; icon: IconName }[] = [
   { href: '/platform', label: 'platform.nav.overview', icon: 'chart' },
   { href: '/platform/tenants', label: 'platform.nav.tenants', icon: 'building' },
   { href: '/platform/plans', label: 'platform.nav.plans', icon: 'sliders' },
+  { href: '/platform/voice', label: 'platform.nav.voice', icon: 'speaker' },
   { href: '/platform/audit', label: 'platform.nav.audit', icon: 'list' },
 ];
 

@@ -2,6 +2,7 @@ import { arAi, enAi } from './i18n-ai';
 import { arField, enField } from './i18n-field';
 import { arPlatform, enPlatform } from './i18n-platform';
 import { arAgents, enAgents } from './i18n-agents';
+import { arVoice, enVoice } from './i18n-voice';
 import { arCrm, enCrm } from './i18n-crm';
 
 export type Locale = 'ar' | 'en';
@@ -149,7 +150,7 @@ const arBase = {
   'form.vat': 'الرقم الضريبي 15 رقماً يبدأ وينتهي بـ 3.',
 };
 
-const ar = { ...arBase, ...arCrm, ...arAi, ...arField, ...arPlatform, ...arAgents };
+const ar = { ...arBase, ...arCrm, ...arAi, ...arField, ...arPlatform, ...arAgents, ...arVoice };
 export type MessageKey = keyof typeof ar;
 
 const enBase: Record<keyof typeof arBase, string> = {
@@ -294,7 +295,7 @@ const enBase: Record<keyof typeof arBase, string> = {
   'form.vat': 'VAT number is 15 digits starting and ending with 3.',
 };
 
-const en: Record<MessageKey, string> = { ...enBase, ...enCrm, ...enAi, ...enField, ...enPlatform, ...enAgents };
+const en: Record<MessageKey, string> = { ...enBase, ...enCrm, ...enAi, ...enField, ...enPlatform, ...enAgents, ...enVoice };
 
 export const messages: Record<Locale, Record<MessageKey, string>> = { ar, en };
 
@@ -322,6 +323,9 @@ const AUDIT_ACTIONS: Record<string, { ar: string; en: string }> = {
   'auth.email_verified': { ar: 'تأكيد البريد', en: 'Email confirmed' },
   'auth.session_revoked': { ar: 'إنهاء جلسة', en: 'Session ended' },
   'platform.subscription.update': { ar: 'تعديل الاشتراك من إدارة المنصة', en: 'Subscription changed by the platform' },
+  'platform.voice.set': { ar: 'إنشاء صوت راكان الرسمي (بموافقة صاحب الصوت)', en: "Rakan's official voice created (owner consented)" },
+  'platform.voice.replace': { ar: 'استبدال صوت راكان الرسمي', en: "Rakan's official voice replaced" },
+  'platform.voice.delete': { ar: 'حذف صوت راكان الرسمي', en: "Rakan's official voice deleted" },
   'platform.plan.create': { ar: 'إنشاء باقة', en: 'Plan created' },
   'platform.operator.grant': { ar: 'منح صلاحية إدارة المنصة', en: 'Platform access granted' },
   'platform.operator.revoke': { ar: 'سحب صلاحية إدارة المنصة', en: 'Platform access revoked' },
