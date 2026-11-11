@@ -326,6 +326,8 @@ const AUDIT_ACTIONS: Record<string, { ar: string; en: string }> = {
   'platform.voice.set': { ar: 'إنشاء صوت راكان الرسمي (بموافقة صاحب الصوت)', en: "Rakan's official voice created (owner consented)" },
   'platform.voice.replace': { ar: 'استبدال صوت راكان الرسمي', en: "Rakan's official voice replaced" },
   'platform.voice.delete': { ar: 'حذف صوت راكان الرسمي', en: "Rakan's official voice deleted" },
+  'platform.voice.library': { ar: 'اختيار صوت جاهز لراكان', en: 'Ready-made voice chosen for Rakan' },
+  'platform.voice.style': { ar: 'تغيير أسلوب كلام راكان', en: "Rakan's speaking style changed" },
   'platform.plan.create': { ar: 'إنشاء باقة', en: 'Plan created' },
   'platform.operator.grant': { ar: 'منح صلاحية إدارة المنصة', en: 'Platform access granted' },
   'platform.operator.revoke': { ar: 'سحب صلاحية إدارة المنصة', en: 'Platform access revoked' },

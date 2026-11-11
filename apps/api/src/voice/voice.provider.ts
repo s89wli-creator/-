@@ -8,6 +8,8 @@ export interface VoiceProvider {
   readonly ready: boolean;
   cloneVoice(name: string, samples: VoiceSample[], description: string): Promise<{ voiceId: string }>;
   deleteVoice(voiceId: string): Promise<void>;
+  /** Looks a voice up in the account (throws if it is not usable). */
+  getVoice(voiceId: string): Promise<{ name: string }>;
   /** Returns MP3 audio. */
   speak(voiceId: string, text: string): Promise<Buffer>;
   transcribe(audio: Buffer, mimeType: string): Promise<string>;
@@ -20,6 +22,7 @@ export const VOICE_PROVIDER = Symbol('VOICE_PROVIDER');
  * - Text to speech:       POST /v1/text-to-speech/{voice_id}?output_format=mp3_44100_128 (JSON: text, model_id, language_code)
  * - Speech to text:       POST /v1/speech-to-text (multipart: model_id, file, language_code)
  * - Delete voice:         DELETE /v1/voices/{voice_id}
+ * - Get voice:            GET /v1/voices/{voice_id}   (library voices must first be added to the account's voices)
  * Verify these against the current ElevenLabs API reference when enabling the key (they could not be fetched
  * from the development environment).
  */
@@ -61,6 +64,11 @@ export class ElevenLabsProvider implements VoiceProvider {
     await this.call(`/v1/voices/${encodeURIComponent(voiceId)}`, { method: 'DELETE' });
   }
 
+  async getVoice(voiceId: string): Promise<{ name: string }> {
+    const body = (await (await this.call(`/v1/voices/${encodeURIComponent(voiceId)}`, { method: 'GET' })).json()) as { name?: string };
+    return { name: body.name ?? voiceId };
+  }
+
   async speak(voiceId: string, text: string): Promise<Buffer> {
     const res = await this.call(`/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
       method: 'POST',
@@ -93,6 +101,11 @@ export class FakeVoiceProvider implements VoiceProvider {
   }
   async deleteVoice(voiceId: string): Promise<void> {
     this.log.push({ op: 'delete', arg: voiceId });
+  }
+  async getVoice(voiceId: string): Promise<{ name: string }> {
+    this.log.push({ op: 'get', arg: voiceId });
+    if (!voiceId.startsWith('lib')) throw new Error('voice not found');
+    return { name: 'Saudi male' };
   }
   async speak(voiceId: string, text: string): Promise<Buffer> {
     this.log.push({ op: 'speak', arg: { voiceId, chars: text.length } });

@@ -36,6 +36,9 @@ const envSchema = z.object({
   ELEVENLABS_API_KEY: z.string().optional(),
   ELEVENLABS_TTS_MODEL: z.string().default('eleven_multilingual_v2'),
   ELEVENLABS_STT_MODEL: z.string().default('scribe_v1'),
+  /** Optional server default voice (e.g. a male voice with a general Saudi accent from the voice library). */
+  ELEVENLABS_DEFAULT_VOICE_ID: z.string().regex(/^[A-Za-z0-9_-]{8,64}$/).optional(),
+  ELEVENLABS_DEFAULT_VOICE_NAME: z.string().default('راكان'),
   /** Approximate list prices used for budgeting (USD); adjust to your ElevenLabs plan. */
   VOICE_TTS_USD_PER_1K_CHARS: z.coerce.number().min(0).default(0.3),
   VOICE_STT_USD_PER_MINUTE: z.coerce.number().min(0).default(0.007),

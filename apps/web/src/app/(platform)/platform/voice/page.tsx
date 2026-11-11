@@ -1,8 +1,8 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { PlatformVoiceDto } from '@rakan/shared';
-import { useEffect, useState, type FormEvent } from 'react';
+import { SPEECH_STYLES, type PlatformVoiceDto, type SpeechStyle } from '@rakan/shared';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useConfirm, useToast } from '@/components/feedback';
 import { Icon } from '@/components/icons';
 import { Alert, Badge, Button, Card, CardHeading, ErrorState, Field, Input, LoadingState, PageHeader, formatBytes, formatDate } from '@/components/ui';
@@ -11,6 +11,7 @@ import { useI18n } from '@/lib/providers';
 import { mmss, useRecorder, type Recording } from '@/lib/voice';
 
 const MAX_SAMPLE_SECONDS = 180;
+type Mode = 'library' | 'cloned';
 
 /** Platform console: create, replace or delete Rakan's official (cloned, consented) voice. */
 export default function PlatformVoicePage() {
@@ -25,6 +26,9 @@ export default function PlatformVoicePage() {
   const [consent, setConsent] = useState(false);
   const [name, setName] = useState('راكان');
   const [micError, setMicError] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>('library');
+  const [voiceId, setVoiceId] = useState('');
+  const previewAudio = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (!sample) return setPreview(null);
@@ -50,6 +54,28 @@ export default function PlatformVoicePage() {
       done(d, t('platform.voice.saved'));
     },
   });
+  const library = useMutation({
+    mutationFn: () => api<PlatformVoiceDto>('/platform/voice/library', { method: 'PUT', body: { voiceId: voiceId.trim(), displayName: name.trim() } }),
+    onSuccess: (d) => {
+      setVoiceId('');
+      done(d, t('platform.voice.saved'));
+    },
+  });
+  const style = useMutation({
+    mutationFn: (s: SpeechStyle) => api<PlatformVoiceDto>('/platform/voice/style', { method: 'PUT', body: { style: s } }),
+    onSuccess: (d) => done(d, t('platform.voice.styleSaved')),
+  });
+  const sampleTest = useMutation({
+    mutationFn: async () => URL.createObjectURL(await (await apiBinary('/platform/voice/preview', undefined)).blob()),
+    onSuccess: (url) => {
+      previewAudio.current?.pause();
+      const el = new Audio(url);
+      el.onended = () => URL.revokeObjectURL(url);
+      previewAudio.current = el;
+      void el.play().catch(() => undefined);
+    },
+  });
+  useEffect(() => () => previewAudio.current?.pause(), []);
   const remove = useMutation({
     mutationFn: () => api<PlatformVoiceDto>('/platform/voice', { method: 'DELETE' }),
     onSuccess: (d) => done(d, t('platform.voice.deleted')),
@@ -77,6 +103,27 @@ export default function PlatformVoicePage() {
         <Card className="p-5 sm:p-6">
           <CardHeading>{v.configured ? t('platform.voice.replace') : t('platform.voice.setup')}</CardHeading>
           {!v.providerReady && <div className="mb-4"><Alert tone="warn">{t('platform.voice.notReady')}</Alert></div>}
+          <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-subtle-strong p-1" role="radiogroup" aria-label={t('platform.voice.setup')}>
+            {(['library', 'cloned'] as const).map((m) => (
+              <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => setMode(m)}
+                className={`min-h-10 rounded-md px-2 text-sm transition-colors ${mode === m ? 'bg-surface font-medium text-fg shadow-xs' : 'text-fg-muted hover:text-fg'}`}>
+                {t(`platform.voice.mode.${m}`)}
+              </button>
+            ))}
+          </div>
+          {mode === 'library' ? (
+          <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); library.mutate(); }}>
+            {library.error && <Alert tone="error">{err(library.error)}</Alert>}
+            <p className="text-sm text-fg-sub">{t('platform.voice.libraryHow')}</p>
+            <Field label={t('platform.voice.voiceId')} htmlFor="voice-id">
+              <Input id="voice-id" dir="ltr" value={voiceId} onChange={(e) => setVoiceId(e.target.value)} required pattern="[A-Za-z0-9_\-]{8,64}" placeholder="AbCdEf0123456789wxyz" />
+            </Field>
+            <Field label={t('platform.voice.name')} htmlFor="voice-name-lib">
+              <Input id="voice-name-lib" value={name} onChange={(e) => setName(e.target.value)} required minLength={2} maxLength={60} />
+            </Field>
+            <Button type="submit" icon="check" loading={library.isPending} disabled={!v.providerReady || voiceId.trim().length < 8 || name.trim().length < 2}>{t('platform.voice.useLibrary')}</Button>
+          </form>
+          ) : (
           <form onSubmit={submit} className="space-y-5">
             {save.error && <Alert tone="error">{err(save.error)}</Alert>}
             <p className="text-sm text-fg-sub">{t('platform.voice.howTo')}</p>
@@ -133,6 +180,7 @@ export default function PlatformVoicePage() {
               {v.configured ? t('platform.voice.replace') : t('platform.voice.setup')}
             </Button>
           </form>
+          )}
         </Card>
 
         <div className="space-y-4">
@@ -147,14 +195,32 @@ export default function PlatformVoicePage() {
                     <Badge tone="accent">{t('voice.disclosure')}</Badge>
                   </div>
                 </div>
-                <p className="text-sm text-fg-muted">{t('platform.voice.consentedBy', { name: v.consentedByName ?? '—', date: v.consentedAt ? formatDate(v.consentedAt, locale, true) : '—' })}</p>
-                {remove.error && <Alert tone="error">{err(remove.error)}</Alert>}
-                <Button variant="danger" icon="trash" loading={remove.isPending}
+                {v.kind && <p className="text-sm text-fg-sub">{t(`platform.voice.kind.${v.kind}`)}</p>}
+                {v.kind === 'cloned' && <p className="text-sm text-fg-muted">{t('platform.voice.consentedBy', { name: v.consentedByName ?? '—', date: v.consentedAt ? formatDate(v.consentedAt, locale, true) : '—' })}</p>}
+                {(remove.error || sampleTest.error) && <Alert tone="error">{err(remove.error ?? sampleTest.error)}</Alert>}
+                <div>
+                  <Button variant="secondary" icon="speaker" loading={sampleTest.isPending} disabled={!v.providerReady} onClick={() => sampleTest.mutate()}>{t('platform.voice.preview')}</Button>
+                  <p className="mt-1 text-xs text-fg-muted">{t('platform.voice.previewNote')}</p>
+                </div>
+                {v.kind !== 'env' && <Button variant="danger" icon="trash" loading={remove.isPending}
                   onClick={async () => { if (await confirm({ title: t('platform.voice.delete'), body: t('platform.voice.deleteConfirm'), confirmLabel: t('platform.voice.delete') })) remove.mutate(); }}>
                   {t('platform.voice.delete')}
-                </Button>
+                </Button>}
               </div>
             ) : <p className="text-sm text-fg-muted">{t('platform.voice.none')}</p>}
+          </Card>
+          <Card className="p-5">
+            <CardHeading>{t('platform.voice.style')}</CardHeading>
+            <p className="mb-3 text-sm text-fg-muted">{t('platform.voice.styleHint')}</p>
+            {style.error && <div className="mb-2"><Alert tone="error">{err(style.error)}</Alert></div>}
+            <div className="grid gap-2" role="radiogroup" aria-label={t('platform.voice.style')}>
+              {SPEECH_STYLES.map((st) => (
+                <label key={st} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm ${v.speechStyle === st ? 'border-brand-600 bg-brand-50 font-medium text-brand-700' : 'border-line'}`}>
+                  <input type="radio" name="speech-style" className="size-4 accent-[var(--color-brand-600)]" checked={v.speechStyle === st} disabled={style.isPending} onChange={() => style.mutate(st)} />
+                  {t(`platform.voice.style.${st}`)}
+                </label>
+              ))}
+            </div>
           </Card>
           <Card className="p-5">
             <p className="text-sm text-fg-sub">{t('platform.voice.pricing', { tts: v.pricing.ttsUsdPer1kChars, stt: v.pricing.sttUsdPerMinute })}</p>

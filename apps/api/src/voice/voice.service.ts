@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { aiUsage, assistantConversations, assistantMessages, platformAudit, platformVoice, tenants, users } from '@rakan/db';
-import { VOICE_CONSENT_STATEMENT, type PlatformVoiceDto, type VoiceStatusDto } from '@rakan/shared';
+import { aiUsage, assistantConversations, assistantMessages, platformAudit, platformSettings, platformVoice, tenants, users } from '@rakan/db';
+import { SPEECH_STYLES, VOICE_CONSENT_STATEMENT, type PlatformVoiceDto, type SpeechStyle, type VoiceStatusDto } from '@rakan/shared';
 import { and, eq } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import type { AuthContext, RequestMeta, TenantAuthContext } from '../common/auth-context';
@@ -17,6 +17,8 @@ export const MAX_SPOKEN_CHARS = 1200;
 export const MAX_LISTEN_SECONDS = 60;
 const SAMPLE_MIN_BYTES = 30_000;
 const SAMPLE_MAX_BYTES = 12 * 1024 * 1024;
+/** Fixed sentence for previewing the voice (never free text). */
+export const PREVIEW_TEXT = 'هلا والله، معك راكان. جاهز أساعدك اليوم: أرتب لك زياراتك، وأذكّرك بالعملاء اللي يبيلهم متابعة، وأجهّز لك ملخص قبل كل اجتماع.';
 const AUDIO_TYPES = ['audio/webm', 'audio/ogg', 'audio/mp4', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/aac', 'audio/x-m4a'];
 
 /** Turns a written reply into text worth speaking: no markdown, links or long lists of symbols. */
@@ -65,6 +67,20 @@ export class VoiceService {
     return this.db.platform(async (tx) => (await tx.select().from(platformVoice).where(eq(platformVoice.id, 1)))[0] ?? null);
   }
 
+  /** The voice in use: the one set in the console, else the server default voice (if configured). */
+  private async effective(): Promise<{ voiceId: string; displayName: string; kind: 'cloned' | 'library' | 'env' } | null> {
+    const v = await this.current();
+    if (v) return { voiceId: v.voiceId, displayName: v.displayName, kind: v.kind };
+    const id = this.config.ELEVENLABS_DEFAULT_VOICE_ID;
+    return id ? { voiceId: id, displayName: this.config.ELEVENLABS_DEFAULT_VOICE_NAME, kind: 'env' } : null;
+  }
+
+  /** How Rakan speaks in Ask Rakan (written and spoken): general Saudi dialect by default. */
+  async speechStyle(): Promise<SpeechStyle> {
+    const [row] = await this.db.platform((tx) => tx.select().from(platformSettings).where(eq(platformSettings.key, 'speech_style')));
+    return (SPEECH_STYLES as readonly unknown[]).includes(row?.value) ? (row!.value as SpeechStyle) : 'saudi';
+  }
+
   private pricing() {
     return { ttsUsdPer1kChars: this.config.VOICE_TTS_USD_PER_1K_CHARS, sttUsdPerMinute: this.config.VOICE_STT_USD_PER_MINUTE };
   }
@@ -83,7 +99,7 @@ export class VoiceService {
   // ---------------------------------------------------------------- company side
 
   async status(auth: TenantAuthContext): Promise<VoiceStatusDto> {
-    const voice = await this.current();
+    const voice = await this.effective();
     const g = await this.db.tenant(auth, (tx) => this.runtime.voiceGate(tx, auth.tenantId));
     const ok = this.provider.ready && g.enabled && !g.budgetReached;
     return {
@@ -104,7 +120,7 @@ export class VoiceService {
     });
     if (!msg || msg.role !== 'assistant') throw notFound('Message');
     if (!this.provider.ready) throw new AppError(503, 'VOICE_NOT_CONFIGURED', 'No voice provider is configured');
-    const voice = await this.current();
+    const voice = await this.effective();
     if (!voice) throw new AppError(503, 'VOICE_NOT_SET', 'The spokesperson voice has not been set up yet');
 
     const key = `${auth.tenantId}/voice/${voice.voiceId}/${messageId}.mp3`;
@@ -156,10 +172,13 @@ export class VoiceService {
       const [row] = await tx.select({ v: platformVoice, name: users.fullName }).from(platformVoice).leftJoin(users, eq(users.id, platformVoice.consentedBy));
       return row ?? null;
     });
+    const eff = await this.effective();
+    const cloned = v?.v.kind === 'cloned';
     return {
-      providerReady: this.provider.ready, provider: this.provider.name, configured: !!v, displayName: v?.v.displayName ?? null,
-      consentStatement: v?.v.consentStatement ?? VOICE_CONSENT_STATEMENT, consentedByName: v?.name ?? null,
-      consentedAt: v?.v.consentedAt.toISOString() ?? null, sampleBytes: v?.v.sampleBytes ?? null,
+      providerReady: this.provider.ready, provider: this.provider.name, configured: !!eff, kind: eff?.kind ?? null,
+      displayName: eff?.displayName ?? null, speechStyle: await this.speechStyle(),
+      consentStatement: (cloned ? v?.v.consentStatement : null) ?? VOICE_CONSENT_STATEMENT, consentedByName: cloned ? (v?.name ?? null) : null,
+      consentedAt: cloned ? (v?.v.consentedAt.toISOString() ?? null) : null, sampleBytes: cloned ? (v?.v.sampleBytes ?? null) : null,
       pricing: this.pricing(),
     };
   }
@@ -209,27 +228,79 @@ export class VoiceService {
     }
     const sha = createHash('sha256').update(sample).digest('hex');
     const row = {
-      provider: this.provider.name, voiceId, displayName: name, consentStatement: VOICE_CONSENT_STATEMENT, consentedBy: auth.userId,
+      kind: 'cloned' as const, provider: this.provider.name, voiceId, displayName: name, consentStatement: VOICE_CONSENT_STATEMENT, consentedBy: auth.userId,
       consentedAt: new Date(), sampleSha256: sha, sampleBytes: sample.length, createdAt: new Date(),
     };
     await this.db.platform((tx) => tx.insert(platformVoice).values({ id: 1, ...row }).onConflictDoUpdate({ target: platformVoice.id, set: row }));
-    if (before) {
-      await this.provider.deleteVoice(before.voiceId).catch((e) => this.log.warn({ err: e }, 'old voice not deleted at provider'));
-      await this.purgeClips();
-    }
+    await this.retire(before);
     await this.audit(auth, before ? 'platform.voice.replace' : 'platform.voice.set', before ? { displayName: before.displayName, sampleSha256: before.sampleSha256 } : null,
       { displayName: name, sampleSha256: sha, sampleBytes: sample.length, provider: this.provider.name, consent: VOICE_CONSENT_STATEMENT }, meta);
     return this.platformGet();
   }
 
-  /** Deletes the voice at the provider, erases cached clips; voice replies stop immediately. */
+  /** After a voice is replaced or removed: delete a cloned voice at the provider (library voices are not ours) and erase clips. */
+  private async retire(before: Awaited<ReturnType<VoiceService['current']>>): Promise<void> {
+    if (!before) return;
+    if (before.kind === 'cloned' && this.provider.ready) {
+      await this.provider.deleteVoice(before.voiceId).catch((e) => this.log.warn({ err: e }, 'old voice not deleted at provider'));
+    }
+    await this.purgeClips();
+  }
+
+  /**
+   * Uses a ready-made voice from the provider's voice library (e.g. a male voice with a general Saudi accent).
+   * The voice must be in the provider account ("My Voices"); it is checked there before being used.
+   */
+  async platformSetLibrary(auth: AuthContext, input: { voiceId: string; displayName: string }, meta: RequestMeta): Promise<PlatformVoiceDto> {
+    if (!this.provider.ready) throw new AppError(503, 'VOICE_NOT_CONFIGURED', 'No voice provider is configured');
+    let providerName: string;
+    try {
+      ({ name: providerName } = await this.provider.getVoice(input.voiceId));
+    } catch {
+      throw badRequest('VOICE_NOT_FOUND', 'This voice was not found in the voice provider account');
+    }
+    const before = await this.current();
+    const row = {
+      kind: 'library' as const, provider: this.provider.name, voiceId: input.voiceId, displayName: input.displayName, consentStatement: null,
+      consentedBy: auth.userId, consentedAt: new Date(), sampleSha256: null, sampleBytes: null, createdAt: new Date(),
+    };
+    await this.db.platform((tx) => tx.insert(platformVoice).values({ id: 1, ...row }).onConflictDoUpdate({ target: platformVoice.id, set: row }));
+    if (before?.voiceId !== input.voiceId) await this.retire(before);
+    await this.audit(auth, 'platform.voice.library', before ? { displayName: before.displayName, kind: before.kind } : null,
+      { displayName: input.displayName, voiceId: input.voiceId, providerVoiceName: providerName }, meta);
+    return this.platformGet();
+  }
+
+  /** Speaks a fixed sentence with the voice in use (to hear it before companies do). Not billed to any company. */
+  async preview(): Promise<Buffer> {
+    if (!this.provider.ready) throw new AppError(503, 'VOICE_NOT_CONFIGURED', 'No voice provider is configured');
+    const voice = await this.effective();
+    if (!voice) throw new AppError(503, 'VOICE_NOT_SET', 'The spokesperson voice has not been set up yet');
+    try {
+      return await this.provider.speak(voice.voiceId, PREVIEW_TEXT);
+    } catch (e) {
+      this.log.error({ err: e }, 'voice preview failed');
+      throw new AppError(502, 'VOICE_FAILED', 'Could not generate the voice, please try again');
+    }
+  }
+
+  async setSpeechStyle(auth: AuthContext, style: SpeechStyle, meta: RequestMeta): Promise<PlatformVoiceDto> {
+    const before = await this.speechStyle();
+    await this.db.platform((tx) =>
+      tx.insert(platformSettings).values({ key: 'speech_style', value: style, updatedBy: auth.userId })
+        .onConflictDoUpdate({ target: platformSettings.key, set: { value: style, updatedBy: auth.userId, updatedAt: new Date() } }),
+    );
+    await this.audit(auth, 'platform.voice.style', { style: before }, { style }, meta);
+    return this.platformGet();
+  }
+
+  /** Removes the voice set in the console (a cloned voice is deleted at the provider); erases cached clips. */
   async platformRemove(auth: AuthContext, meta: RequestMeta): Promise<PlatformVoiceDto> {
     const v = await this.current();
     if (!v) throw notFound('Voice');
-    if (this.provider.ready) await this.provider.deleteVoice(v.voiceId).catch((e) => this.log.warn({ err: e }, 'voice not deleted at provider'));
     await this.db.platform((tx) => tx.delete(platformVoice).where(eq(platformVoice.id, 1)));
-    await this.purgeClips();
-    await this.audit(auth, 'platform.voice.delete', { displayName: v.displayName, sampleSha256: v.sampleSha256 }, null, meta);
+    await this.retire(v);
+    await this.audit(auth, 'platform.voice.delete', { displayName: v.displayName, kind: v.kind, sampleSha256: v.sampleSha256 }, null, meta);
     return this.platformGet();
   }
 }

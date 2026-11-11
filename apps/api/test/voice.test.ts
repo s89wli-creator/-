@@ -32,6 +32,7 @@ afterAll(async () => app.close());
 beforeEach(async () => {
   await resetDb();
   await ownerQuery('DELETE FROM platform_voice');
+  await ownerQuery(`UPDATE platform_settings SET value = '"saudi"' WHERE key = 'speech_style'`);
   fake(app).reset();
   installDefaultAgents(fake(app));
   voice().log.length = 0;
@@ -137,6 +138,64 @@ describe('Ask Rakan by voice', () => {
     expect(existsSync(dir)).toBe(false);
     expect((await acme.client.post(`/ai/assistant/messages/${replyId}/speech`).expect(503)).body.error.code).toBe('VOICE_NOT_SET');
     expect(voice().log.map((l) => l.op)).toEqual(['clone', 'speak', 'delete']);
+  });
+});
+
+describe('ready-made voice (male, general Saudi accent) and speaking style', () => {
+  it('uses a library voice only after checking it exists in the provider account', async () => {
+    await op.put('/platform/voice/library', { voiceId: 'bad id!', displayName: 'راكان' }).expect(400);
+    expect((await op.put('/platform/voice/library', { voiceId: 'unknownVoice01', displayName: 'راكان' }).expect(400)).body.error.code).toBe('VOICE_NOT_FOUND');
+    await acme.client.put('/platform/voice/library', { voiceId: 'libSaudiMale01', displayName: 'راكان' }).expect(403);
+    const v = (await op.put('/platform/voice/library', { voiceId: 'libSaudiMale01', displayName: 'راكان' }).expect(200)).body;
+    expect(v).toMatchObject({ configured: true, kind: 'library', displayName: 'راكان', consentedByName: null, sampleBytes: null });
+    expect((await acme.client.get('/ai/voice/status').expect(200)).body).toMatchObject({ canSpeak: true, voiceName: 'راكان' });
+    const { replyId } = await askOnce(acme.client);
+    await acme.client.post(`/ai/assistant/messages/${replyId}/speech`).expect(200);
+    expect(voice().log.find((l) => l.op === 'speak')!.arg).toMatchObject({ voiceId: 'libSaudiMale01' });
+    expect((await op.get('/platform/audit').expect(200)).body[0]).toMatchObject({ action: 'platform.voice.library' });
+  });
+
+  it('switching from a cloned voice to a library voice deletes the clone; removing a library voice never deletes it at the provider', async () => {
+    await setVoice(op).expect(200);
+    await op.put('/platform/voice/library', { voiceId: 'libSaudiMale01', displayName: 'راكان' }).expect(200);
+    await op.delete('/platform/voice').expect(200);
+    expect(voice().log.map((l) => l.op)).toEqual(['clone', 'get', 'delete']);
+    expect((voice().log[2]!.arg as string).startsWith('fake-voice')).toBe(true);
+  });
+
+  it('previews a fixed sentence for operators only, billed to no company', async () => {
+    await op.post('/platform/voice/preview').expect(503);
+    await op.put('/platform/voice/library', { voiceId: 'libSaudiMale01', displayName: 'راكان' }).expect(200);
+    await acme.client.post('/platform/voice/preview').expect(403);
+    const res = await op.post('/platform/voice/preview').buffer(true).expect(200);
+    expect(res.headers['content-type']).toBe('audio/mpeg');
+    expect((await ownerQuery('SELECT 1 FROM ai_usage')).length).toBe(0);
+  });
+
+  it('Rakan answers in general Saudi dialect by default; operators can switch to formal Arabic', async () => {
+    expect((await op.get('/platform/voice').expect(200)).body.speechStyle).toBe('saudi');
+    await askOnce(acme.client);
+    expect(fake(app).chats.at(-1)!.system).toContain('اللهجة السعودية العامة');
+    await acme.client.put('/platform/voice/style', { style: 'msa' }).expect(403);
+    await op.put('/platform/voice/style', { style: 'gulf' }).expect(400);
+    expect((await op.put('/platform/voice/style', { style: 'msa' }).expect(200)).body.speechStyle).toBe('msa');
+    await askOnce(acme.client);
+    expect(fake(app).chats.at(-1)!.system).not.toContain('اللهجة السعودية العامة');
+    await op.put('/platform/voice/style', { style: 'saudi' }).expect(200);
+  });
+
+  it('a server default voice works without any console setup', async () => {
+    const other = await startApp({ ELEVENLABS_DEFAULT_VOICE_ID: 'envSaudiMale01', ELEVENLABS_DEFAULT_VOICE_NAME: 'راكان' });
+    try {
+      const c = await registerCompany(other, { email: 'owner@env.sa', company: 'Env Co' });
+      installDefaultAgents(fake(other));
+      expect((await c.client.get('/ai/voice/status').expect(200)).body).toMatchObject({ canSpeak: true, voiceName: 'راكان' });
+      const conv = (await c.client.post('/ai/assistant/messages', { message: 'هلا' }).expect(200)).body;
+      await c.client.post(`/ai/assistant/messages/${conv.messages.at(-1).id}/speech`).expect(200);
+      expect(((other.get(VOICE_PROVIDER) as FakeVoiceProvider).log.at(-1)!.arg as { voiceId: string }).voiceId).toBe('envSaudiMale01');
+    } finally {
+      await other.close();
+    }
   });
 });
 

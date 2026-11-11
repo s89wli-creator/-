@@ -44,16 +44,25 @@ export const platformAudit = pgTable('platform_audit', {
   createdAt: ts('created_at').notNull().default(sql`now()`),
 });
 
-/** Mirrors migrations/0008_voice.sql: the single spokesperson voice. */
+/** Mirrors migrations/0008_voice.sql + 0009: the single spokesperson voice. */
 export const platformVoice = pgTable('platform_voice', {
   id: integer('id').primaryKey().default(1),
   provider: text('provider').notNull(),
   voiceId: text('voice_id').notNull(),
   displayName: text('display_name').notNull(),
-  consentStatement: text('consent_statement').notNull(),
+  kind: text('kind').$type<'cloned' | 'library'>().notNull().default('cloned'),
+  consentStatement: text('consent_statement'),
   consentedBy: uuid('consented_by'),
   consentedAt: ts('consented_at').notNull().defaultNow(),
-  sampleSha256: text('sample_sha256').notNull(),
-  sampleBytes: integer('sample_bytes').notNull(),
+  sampleSha256: text('sample_sha256'),
+  sampleBytes: integer('sample_bytes'),
   createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+/** Mirrors migrations/0009_voice_library.sql. */
+export const platformSettings = pgTable('platform_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').notNull(),
+  updatedBy: uuid('updated_by'),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
 });

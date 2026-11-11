@@ -88,6 +88,16 @@ async function register(browser, company, email) {
   await ops.goto(BASE + '/platform/voice');
   await ops.getByRole('heading', { name: 'صوت راكان الرسمي' }).waitFor();
   await ops.getByText('لم يُضبط مفتاح مزود الصوت').waitFor();
+  assert(await ops.getByRole('button', { name: 'استخدم هذا الصوت' }).isDisabled(), 'library voice must be disabled without a voice provider');
+  assert(await ops.getByRole('radio', { name: 'لهجة سعودية عامة' }).isChecked(), 'Saudi dialect is the default speaking style');
+  // Controlled radios: the saved value comes back from the server, then the radio shows it.
+  await ops.getByRole('radio', { name: 'فصحى مهنية' }).click();
+  await ops.getByRole('status').filter({ hasText: 'تم حفظ أسلوب الكلام' }).first().waitFor();
+  await ops.waitForFunction(() => document.querySelectorAll('input[name="speech-style"]')[1]?.checked === true);
+  await ops.getByRole('radio', { name: 'لهجة سعودية عامة' }).click();
+  await ops.waitForFunction(() => document.querySelectorAll('input[name="speech-style"]')[0]?.checked === true);
+  await ops.screenshot({ path: `${OUT}/platform-04-voice-library.png`, fullPage: true });
+  await ops.getByRole('radio', { name: 'صوت شخص حقيقي (بموافقته)' }).click();
   await ops.getByText('أقرّ بأن هذا التسجيل بصوتي أنا').waitFor();
   assert(await ops.getByRole('button', { name: 'ابدأ التسجيل' }).isDisabled(), 'recording must be disabled without a voice provider');
   assert(await ops.getByRole('button', { name: 'إنشاء الصوت' }).isDisabled(), 'create must be disabled without a voice provider');

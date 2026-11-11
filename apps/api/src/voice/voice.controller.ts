@@ -1,4 +1,7 @@
-import { Controller, Delete, Get, Headers, HttpCode, Param, ParseIntPipe, Post, Query, Req, Res, StreamableFile } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, HttpCode, Param, ParseIntPipe, Post, Put, Query, Req, Res, StreamableFile } from '@nestjs/common';
+import { libraryVoiceSchema, speechStyleSchema } from '@rakan/shared';
+import { z } from 'zod';
+import { ZodPipe } from '../common/zod.pipe';
 import type { Response } from 'express';
 import type { AuthContext, RequestMeta, TenantAuthContext } from '../common/auth-context';
 import { Auth, Meta, PlatformAdminOnly, RequirePermission, type RakanRequest } from '../common/decorators';
@@ -58,6 +61,28 @@ export class PlatformVoiceController {
     @Meta() meta: RequestMeta,
   ) {
     return this.voice.platformSet(auth, { sample: req.body as Buffer | undefined, mimeType: type, displayName: String(name ?? ''), consent: String(consent ?? '') }, meta);
+  }
+
+  /** A ready-made voice from the provider's library (e.g. male, general Saudi accent). */
+  @HttpCode(200)
+  @Put('voice/library')
+  library(@Auth() auth: AuthContext, @Body(new ZodPipe(libraryVoiceSchema)) body: z.infer<typeof libraryVoiceSchema>, @Meta() meta: RequestMeta) {
+    return this.voice.platformSetLibrary(auth, body, meta);
+  }
+
+  @HttpCode(200)
+  @Put('voice/style')
+  style(@Auth() auth: AuthContext, @Body(new ZodPipe(speechStyleSchema)) body: z.infer<typeof speechStyleSchema>, @Meta() meta: RequestMeta) {
+    return this.voice.setSpeechStyle(auth, body.style, meta);
+  }
+
+  @HttpCode(200)
+  @Post('voice/preview')
+  async preview(@Res({ passthrough: true }) res: Response): Promise<StreamableFile> {
+    const audio = await this.voice.preview();
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Rakan-Synthetic-Voice', '1');
+    return new StreamableFile(audio, { type: 'audio/mpeg', length: audio.length });
   }
 
   @HttpCode(200)

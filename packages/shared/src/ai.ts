@@ -206,11 +206,22 @@ export interface VoiceStatusDto {
   pricing: { ttsUsdPer1kChars: number; sttUsdPerMinute: number };
 }
 
+export const SPEECH_STYLES = ['saudi', 'msa'] as const;
+export type SpeechStyle = (typeof SPEECH_STYLES)[number];
+export const libraryVoiceSchema = z.object({
+  voiceId: z.string().trim().regex(/^[A-Za-z0-9_-]{8,64}$/),
+  displayName: z.string().trim().min(2).max(60),
+});
+export const speechStyleSchema = z.object({ style: z.enum(SPEECH_STYLES) });
+
 export interface PlatformVoiceDto {
   providerReady: boolean;
   provider: string;
   configured: boolean;
+  /** 'cloned' = a consenting person's voice; 'library' = a ready-made provider voice; 'env' = server default. */
+  kind: 'cloned' | 'library' | 'env' | null;
   displayName: string | null;
+  speechStyle: SpeechStyle;
   consentStatement: string;
   consentedByName: string | null;
   consentedAt: string | null;
