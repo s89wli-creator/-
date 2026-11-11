@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useToast } from '@/components/feedback';
 import { Alert, Badge, Button, Card, EmptyState, ErrorState, Field, LoadingState, Modal, NoPermission, PageHeader, Tabs, Textarea, formatDate } from '@/components/ui';
+import { money } from '@/components/proposals/ProposalDocument';
 import { api } from '@/lib/api';
 import { errorMessage, type MessageKey } from '@/lib/i18n';
 import { useCan, useI18n, useInvalidate } from '@/lib/providers';
@@ -17,7 +18,7 @@ const STATUS_TONE: Record<string, 'warn' | 'success' | 'danger' | 'muted' | 'bra
 
 /** What exactly will happen if approved: shown verbatim from the stored payload. */
 function PayloadPreview({ a }: { a: ApprovalDto }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const p = a.payload as { subject?: string | null; body?: string; channel?: string };
   if (a.actionType === 'send_message') {
     return (
@@ -25,6 +26,15 @@ function PayloadPreview({ a }: { a: ApprovalDto }) {
         <p className="mb-1 text-xs text-fg-muted">{t(`ai.channel.${p.channel ?? 'email'}` as MessageKey)}</p>
         {p.subject && <p className="mb-2 font-semibold">{p.subject}</p>}
         <p className="whitespace-pre-wrap">{p.body}</p>
+      </div>
+    );
+  }
+  if (a.actionType === 'send_proposal') {
+    const q = a.payload as { number?: string; total?: number };
+    return (
+      <div className="rounded-lg border border-line bg-subtle p-4 text-sm">
+        <p className="font-semibold">{t('approvals.proposalPreview', { number: q.number ?? '', total: money(q.total ?? 0, 'SAR', locale) })}</p>
+        {a.entityId && <Link href={`/proposals/${a.entityId}`} className="mt-1 inline-block text-brand-700 hover:underline">{t('proposal.openProposal')}</Link>}
       </div>
     );
   }
@@ -87,7 +97,7 @@ export default function ApprovalsPage() {
                   <div className="flex flex-col-reverse gap-2 border-t border-line-soft pt-3 sm:flex-row sm:justify-end">
                     <Button variant="danger" onClick={() => { decide.reset(); setRejecting(a); }}>{t('approvals.reject')}</Button>
                     <Button icon="check" loading={decide.isPending && decide.variables?.id === a.id && decide.variables.decision === 'approve'} onClick={() => decide.mutate({ id: a.id, decision: 'approve' })}>
-                      {t(a.actionType === 'send_message' ? 'approvals.approveSend' : 'approvals.approve')}
+                      {t(a.actionType === 'send_message' || a.actionType === 'send_proposal' ? 'approvals.approveSend' : 'approvals.approve')}
                     </Button>
                   </div>
                 ) : (

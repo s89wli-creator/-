@@ -74,6 +74,8 @@ jobs:
           pnpm e2e:field
           psql "$MIGRATION_DATABASE_URL" -c "TRUNCATE users, tenants, sessions, password_reset_tokens, audit_logs, platform_audit CASCADE"
           pnpm e2e:platform
+          psql "$MIGRATION_DATABASE_URL" -c "TRUNCATE users, tenants, sessions, password_reset_tokens, audit_logs, platform_audit CASCADE"
+          pnpm e2e:proposals
       - name: Upload E2E screenshots and logs
         if: always()
         uses: actions/upload-artifact@v4

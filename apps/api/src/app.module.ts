@@ -60,6 +60,8 @@ import { PlatformService } from './platform/platform.service';
 import { PlatformVoiceController, VoiceController } from './voice/voice.controller';
 import { ElevenLabsProvider, FakeVoiceProvider, VOICE_PROVIDER, type VoiceProvider } from './voice/voice.provider';
 import { VoiceService } from './voice/voice.service';
+import { ProposalsController, PublicProposalsController } from './proposals/proposals.controller';
+import { ProposalsService } from './proposals/proposals.service';
 
 function voiceProvider(config: AppConfig): VoiceProvider {
   const kind = config.VOICE_PROVIDER ?? (config.ELEVENLABS_API_KEY ? 'elevenlabs' : 'none');
@@ -118,7 +120,7 @@ export class AppModule implements NestModule {
         HealthController, AuthController, TenantController, TeamController, InvitationsController, AuditController,
         CrmSettingsController, AccountsController, ContactsNotesController, OpportunitiesController, TasksController,
         VisitsController, ImportsController, ReportsController, AttentionController, AiController, BrainController, ApprovalsController, ProspectingController, AssistantController,
-        FieldController, RecordingsController, PlatformController, TenantPlanController, VoiceController, PlatformVoiceController,
+        FieldController, RecordingsController, PlatformController, TenantPlanController, VoiceController, PlatformVoiceController, ProposalsController, PublicProposalsController,
       ],
       providers: [
         DbService, PasswordService, SessionService, MailService, AuditService, SecurityService,
@@ -128,7 +130,7 @@ export class AppModule implements NestModule {
         { provide: LLM_PROVIDER, useValue: llmProvider(config) },
         AiRuntimeService, ToolGatewayService, AiSettingsService, BrainService, AgentsService, MessagingService,
         StorageService, RecordingsService, PlanService, PlatformService, AttentionService, ProspectingService, AssistantService,
-        { provide: VOICE_PROVIDER, useValue: voiceProvider(config) }, VoiceService,
+        { provide: VOICE_PROVIDER, useValue: voiceProvider(config) }, VoiceService, ProposalsService,
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
         // Order matters: rate limit -> CSRF -> session -> permission.

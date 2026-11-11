@@ -44,7 +44,7 @@ export const brainDocumentSchema = z.object({
 
 // ---------------------------------------------------------------- AI settings, approvals
 
-export const AGENTS = ['lead_intel', 'visit_brief', 'meeting_intel', 'follow_up', 'prospecting', 'assistant'] as const;
+export const AGENTS = ['lead_intel', 'visit_brief', 'meeting_intel', 'follow_up', 'prospecting', 'assistant', 'proposal'] as const;
 export type AgentKey = (typeof AGENTS)[number];
 
 export const aiSettingsSchema = z.object({

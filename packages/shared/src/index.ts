@@ -6,3 +6,4 @@ export * from './crm';
 export * from './crm-types';
 export * from './ai';
 export * from './platform';
+export * from './proposals';

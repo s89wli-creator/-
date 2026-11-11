@@ -3,7 +3,7 @@
 import type React from 'react';
 
 import { useMutation, useQuery } from '@tanstack/react-query';
-import type { AccountDto, ActivityDto, ContactDto, NoteDto, OpportunityDto, TaskDto, VisitDto } from '@rakan/shared';
+import type { AccountDto, ActivityDto, ContactDto, NoteDto, OpportunityDto, TaskDto, VisitDto, ProposalSummaryDto } from '@rakan/shared';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
@@ -15,12 +15,14 @@ import {
   formatDate, formatMoney,
 } from '@/components/ui';
 import { useConfirm, useToast } from '@/components/feedback';
+import { NewProposalModal } from '@/components/proposals/NewProposal';
+import { STATUS_TONE as PROPOSAL_TONE, money } from '@/components/proposals/ProposalDocument';
 import { api, ApiError } from '@/lib/api';
 import { useCrmSettings } from '@/lib/crm';
 import type { MessageKey } from '@/lib/i18n';
 import { useCan, useI18n, useInvalidate, useMe } from '@/lib/providers';
 
-type Tab = 'overview' | 'ai' | 'contacts' | 'opportunities' | 'visits' | 'tasks' | 'notes' | 'timeline';
+type Tab = 'overview' | 'ai' | 'contacts' | 'opportunities' | 'proposals' | 'visits' | 'tasks' | 'notes' | 'timeline';
 
 export default function AccountPage() {
   const confirm = useConfirm();
@@ -44,6 +46,8 @@ export default function AccountPage() {
   const visits = useQuery({ queryKey: ['visits', id], queryFn: () => api<VisitDto[]>(`/crm/visits?accountId=${id}&${range}`), enabled });
   const tasks = useQuery({ queryKey: ['tasks', id], queryFn: () => api<TaskDto[]>(`/crm/tasks?view=all&accountId=${id}`), enabled });
   const notes = useQuery({ queryKey: ['notes', id], queryFn: () => api<NoteDto[]>(`/crm/accounts/${id}/notes`), enabled });
+  const proposalsQ = useQuery({ queryKey: ['proposals', 'account', id], queryFn: () => api<ProposalSummaryDto[]>(`/crm/proposals?accountId=${id}`), enabled: enabled && can('crm.proposal.read') });
+  const [newProposal, setNewProposal] = useState(false);
   const timeline = useQuery({ queryKey: ['timeline', id], queryFn: () => api<ActivityDto[]>(`/crm/accounts/${id}/timeline`), enabled: enabled && tab === 'timeline' });
 
   const refresh = (...keys: string[]) => {
@@ -95,6 +99,7 @@ export default function AccountPage() {
     ...(can('ai.use') ? [{ id: 'ai' as Tab, label: t('accounts.tab.ai') }] : []),
     { id: 'contacts', label: t('accounts.tab.contacts'), count: contacts.data?.length },
     { id: 'opportunities', label: t('accounts.tab.opportunities'), count: opps.data?.length },
+    ...(can('crm.proposal.read') ? [{ id: 'proposals' as Tab, label: t('proposal.tab'), count: proposalsQ.data?.length }] : []),
     { id: 'visits', label: t('accounts.tab.visits'), count: visits.data?.length },
     { id: 'tasks', label: t('accounts.tab.tasks'), count: tasks.data?.length },
     { id: 'notes', label: t('accounts.tab.notes'), count: notes.data?.length },
@@ -224,6 +229,28 @@ export default function AccountPage() {
           ) : (
             <EmptyState>{t('opps.empty')}</EmptyState>
           )}
+        </Card>
+      )}
+
+      {tab === 'proposals' && (
+        <Card>
+          {can('crm.proposal.write') && canWrite && <div className="flex justify-end border-b border-line-soft p-3"><Button icon="plus" onClick={() => setNewProposal(true)}>{t('proposal.new')}</Button></div>}
+          {proposalsQ.data?.length ? (
+            <ul className="stagger divide-y divide-line-soft">
+              {proposalsQ.data.map((p) => (
+                <li key={p.id}>
+                  <Link href={`/proposals/${p.id}`} className="flex flex-wrap items-center gap-3 px-5 py-4 hover:bg-subtle">
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-medium">{p.title}</span>
+                      <span className="block text-sm text-fg-muted"><span dir="ltr">{p.number}</span> · {money(p.total, p.currency, locale)}</span>
+                    </span>
+                    <Badge tone={PROPOSAL_TONE[p.status]} dot>{t(`proposal.status.${p.status}`)}</Badge>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : <EmptyState icon="file">{t('proposal.empty')}</EmptyState>}
+          {newProposal && <NewProposalModal open accountId={id} onClose={() => setNewProposal(false)} />}
         </Card>
       )}
 

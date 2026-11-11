@@ -20,6 +20,7 @@
     "e2e:ai": "node e2e/ai.e2e.cjs",
     "e2e:field": "node e2e/field.e2e.cjs",
     "e2e:platform": "node e2e/platform.e2e.cjs",
+    "e2e:proposals": "node e2e/proposals.e2e.cjs",
     "platform:grant": "node scripts/platform-grant.mjs"
   },
   "devDependencies": {

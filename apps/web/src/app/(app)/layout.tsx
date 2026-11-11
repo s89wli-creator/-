@@ -33,6 +33,7 @@ const GROUPS: { label?: MessageKey; items: NavItem[] }[] = [
       { href: '/pipeline', label: 'nav.pipeline', permission: 'crm.opportunity.read', icon: 'kanban' },
       { href: '/visits', label: 'nav.visits', permission: 'crm.visit.read', icon: 'calendar' },
       { href: '/tasks', label: 'nav.tasks', permission: 'crm.task.read', icon: 'checkSquare' },
+      { href: '/proposals', label: 'nav.proposals', permission: 'crm.proposal.read', icon: 'file' },
     ],
   },
   {

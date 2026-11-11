@@ -94,7 +94,7 @@ export default function AssistantPage() {
     player.stop();
     setVoiceError(null);
     const problem = await recorder.start((r) => void heard(r));
-    if (problem) toast(t(problem === 'denied' ? 'voice.micDenied' : 'voice.micUnsupported'), 'error');
+    if (problem) toast(t(problem === 'denied' ? 'talk.micDenied' : 'voice.micUnsupported'), 'error');
   }
 
   function toggleAutoplay() {
@@ -171,10 +171,10 @@ export default function AssistantPage() {
                 <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
                 {m.role === 'assistant' && v?.voiceConfigured && (v.canSpeak || player.playing === m.id) && (
                   <button type="button" onClick={() => (player.playing === m.id ? player.stop() : speak(m.id))} disabled={player.loading === m.id}
-                    aria-label={player.playing === m.id ? t('voice.stop') : `${t('voice.listen')} (${t('voice.disclosure')})`}
+                    aria-label={player.playing === m.id ? t('talk.stop') : `${t('voice.listen')} (${t('voice.disclosure')})`}
                     className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-surface px-3 text-xs font-medium text-brand-700 shadow-xs hover:underline disabled:opacity-60">
                     <Icon name={player.playing === m.id ? 'stop' : 'speaker'} size={16} />
-                    {player.loading === m.id ? t('voice.loading') : player.playing === m.id ? t('voice.stop') : t('voice.listen')}
+                    {player.loading === m.id ? t('voice.loading') : player.playing === m.id ? t('talk.stop') : t('voice.listen')}
                   </button>
                 )}
                 {m.toolCalls.length > 0 && (
@@ -219,7 +219,7 @@ export default function AssistantPage() {
         {recorder.recording ? (
           <div className="flex items-center gap-2 border-t border-line-soft p-3 sm:p-4" role="status">
             <span className="size-2.5 animate-pulse rounded-full bg-danger motion-reduce:animate-none" aria-hidden />
-            <span className="flex-1 text-sm tabular-nums text-fg-sub">{t('voice.recording', { time: `${mmss(recorder.seconds)} / ${mmss(v?.maxSeconds ?? 60)}` })}</span>
+            <span className="flex-1 text-sm tabular-nums text-fg-sub">{t('talk.recording', { time: `${mmss(recorder.seconds)} / ${mmss(v?.maxSeconds ?? 60)}` })}</span>
             <Button variant="ghost" onClick={() => recorder.cancel()}>{t('voice.micCancel')}</Button>
             <Button icon="check" onClick={() => void recorder.stop().then(heard)}>{t('voice.micStop')}</Button>
           </div>

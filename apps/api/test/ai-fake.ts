@@ -41,5 +41,15 @@ export function installDefaultAgents(f: FakeProvider): void {
       whyFit: 'مناسب', fitEvidence: [], sourceUrl: req.prompt.includes('<untrusted_data') ? 'manual' : 'https://dir.example.sa/p', confidence: 0.5,
     }],
   }));
+  // Picks every price on the list (plus one invented reference that must be dropped by the server).
+  f.on('proposal', (req) => {
+    const prices = [...req.prompt.matchAll(/\[(price:[0-9a-f-]{36})\]/g)].map((m) => m[1]!);
+    return {
+      title: 'عرض نقل مبرد',
+      intro: 'يسرنا تقديم هذا العرض بناءً على احتياجكم.',
+      items: [...prices.map((ref) => ({ ref, quantity: 3, why: 'حسب الطلب' })), { ref: 'price:00000000-0000-0000-0000-000000000000', quantity: 1, why: 'بند مخترع' }],
+      unmatchedNeeds: ['تخزين مبرد'],
+    };
+  });
   f.onChat('assistant', () => [{ type: 'text', text: 'تم.' }]);
 }

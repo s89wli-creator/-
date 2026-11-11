@@ -3,6 +3,7 @@ import { arField, enField } from './i18n-field';
 import { arPlatform, enPlatform } from './i18n-platform';
 import { arAgents, enAgents } from './i18n-agents';
 import { arVoice, enVoice } from './i18n-voice';
+import { arProposals, enProposals } from './i18n-proposals';
 import { arCrm, enCrm } from './i18n-crm';
 
 export type Locale = 'ar' | 'en';
@@ -150,7 +151,7 @@ const arBase = {
   'form.vat': 'الرقم الضريبي 15 رقماً يبدأ وينتهي بـ 3.',
 };
 
-const ar = { ...arBase, ...arCrm, ...arAi, ...arField, ...arPlatform, ...arAgents, ...arVoice };
+const ar = { ...arBase, ...arCrm, ...arAi, ...arField, ...arPlatform, ...arAgents, ...arVoice, ...arProposals };
 export type MessageKey = keyof typeof ar;
 
 const enBase: Record<keyof typeof arBase, string> = {
@@ -295,7 +296,7 @@ const enBase: Record<keyof typeof arBase, string> = {
   'form.vat': 'VAT number is 15 digits starting and ending with 3.',
 };
 
-const en: Record<MessageKey, string> = { ...enBase, ...enCrm, ...enAi, ...enField, ...enPlatform, ...enAgents, ...enVoice };
+const en: Record<MessageKey, string> = { ...enBase, ...enCrm, ...enAi, ...enField, ...enPlatform, ...enAgents, ...enVoice, ...enProposals };
 
 export const messages: Record<Locale, Record<MessageKey, string>> = { ar, en };
 
@@ -326,6 +327,12 @@ const AUDIT_ACTIONS: Record<string, { ar: string; en: string }> = {
   'platform.voice.set': { ar: 'إنشاء صوت راكان الرسمي (بموافقة صاحب الصوت)', en: "Rakan's official voice created (owner consented)" },
   'platform.voice.replace': { ar: 'استبدال صوت راكان الرسمي', en: "Rakan's official voice replaced" },
   'platform.voice.delete': { ar: 'حذف صوت راكان الرسمي', en: "Rakan's official voice deleted" },
+  'proposal.create': { ar: 'إنشاء عرض سعر', en: 'Proposal created' },
+  'proposal.update': { ar: 'تعديل عرض سعر', en: 'Proposal edited' },
+  'proposal.cancel': { ar: 'إلغاء عرض سعر', en: 'Proposal cancelled' },
+  'proposal.revise': { ar: 'إعادة عرض سعر إلى مسودة', en: 'Proposal revised' },
+  'proposal.customer_accept': { ar: 'قبل العميل عرض السعر', en: 'Customer accepted a proposal' },
+  'proposal.customer_decline': { ar: 'اعتذر العميل عن عرض السعر', en: 'Customer declined a proposal' },
   'platform.voice.library': { ar: 'اختيار صوت جاهز لراكان', en: 'Ready-made voice chosen for Rakan' },
   'platform.voice.style': { ar: 'تغيير أسلوب كلام راكان', en: "Rakan's speaking style changed" },
   'platform.plan.create': { ar: 'إنشاء باقة', en: 'Plan created' },

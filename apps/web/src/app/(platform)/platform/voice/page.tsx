@@ -89,7 +89,7 @@ export default function PlatformVoicePage() {
     setMicError(null);
     setSample(null);
     const problem = await recorder.start((r) => setSample(r));
-    if (problem) setMicError(t(problem === 'denied' ? 'voice.micDenied' : 'voice.micUnsupported'));
+    if (problem) setMicError(t(problem === 'denied' ? 'talk.micDenied' : 'voice.micUnsupported'));
   }
   function submit(e: FormEvent) {
     e.preventDefault();
