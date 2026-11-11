@@ -1,6 +1,7 @@
 import { arAi, enAi } from './i18n-ai';
 import { arField, enField } from './i18n-field';
 import { arPlatform, enPlatform } from './i18n-platform';
+import { arAgents, enAgents } from './i18n-agents';
 import { arCrm, enCrm } from './i18n-crm';
 
 export type Locale = 'ar' | 'en';
@@ -148,7 +149,7 @@ const arBase = {
   'form.vat': 'الرقم الضريبي 15 رقماً يبدأ وينتهي بـ 3.',
 };
 
-const ar = { ...arBase, ...arCrm, ...arAi, ...arField, ...arPlatform };
+const ar = { ...arBase, ...arCrm, ...arAi, ...arField, ...arPlatform, ...arAgents };
 export type MessageKey = keyof typeof ar;
 
 const enBase: Record<keyof typeof arBase, string> = {
@@ -293,7 +294,7 @@ const enBase: Record<keyof typeof arBase, string> = {
   'form.vat': 'VAT number is 15 digits starting and ending with 3.',
 };
 
-const en: Record<MessageKey, string> = { ...enBase, ...enCrm, ...enAi, ...enField, ...enPlatform };
+const en: Record<MessageKey, string> = { ...enBase, ...enCrm, ...enAi, ...enField, ...enPlatform, ...enAgents };
 
 export const messages: Record<Locale, Record<MessageKey, string>> = { ar, en };
 
@@ -325,6 +326,9 @@ const AUDIT_ACTIONS: Record<string, { ar: string; en: string }> = {
   'platform.operator.grant': { ar: 'منح صلاحية إدارة المنصة', en: 'Platform access granted' },
   'platform.operator.revoke': { ar: 'سحب صلاحية إدارة المنصة', en: 'Platform access revoked' },
   'platform.plan.update': { ar: 'تعديل باقة', en: 'Plan updated' },
+  'prospecting.search': { ar: 'بحث عن عملاء جدد', en: 'Prospect search' },
+  'prospecting.accept': { ar: 'إضافة عميل مقترح', en: 'Prospect added' },
+  'prospecting.reject': { ar: 'استبعاد عميل مقترح', en: 'Prospect dismissed' },
   'recording.start': { ar: 'بدء تسجيل صوتي (بموافقة العميل)', en: 'Recording started (customer consent)' },
   'recording.upload': { ar: 'رفع تسجيل صوتي', en: 'Recording uploaded' },
   'recording.transcript': { ar: 'نص تسجيل', en: 'Recording transcript' },

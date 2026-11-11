@@ -120,6 +120,17 @@ function totp(secretB32) {
   await page.getByText('لا توجد طلبات بانتظار موافقتك').waitFor();
   log('assistant panel + approvals inbox');
 
+  // Agents without a provider: honest "not configured", nothing runs; rules-based attention still works
+  await page.goto(BASE + '/assistant');
+  await page.getByRole('heading', { name: 'اسأل راكان' }).waitFor();
+  assert(await page.locator('#assistant-input').isDisabled(), 'chat input must be disabled without a provider');
+  await page.goto(BASE + '/prospecting');
+  await page.getByRole('heading', { name: 'عملاء جدد مقترحون' }).waitFor();
+  assert(await page.getByRole('button', { name: 'ابحث عن عملاء' }).isDisabled(), 'prospecting must be disabled without a provider');
+  await page.goto(BASE + '/home');
+  await page.getByRole('heading', { name: 'يحتاج انتباهك' }).waitFor();
+  log('Ask Rakan, prospecting and attention screens');
+
   // ---- Two-step verification: enrol, then sign in with a code
   await page.goto(BASE + '/settings/security');
   await page.getByRole('button', { name: 'تفعيل التحقق بخطوتين' }).click();

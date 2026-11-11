@@ -38,7 +38,9 @@ const GROUPS: { label?: MessageKey; items: NavItem[] }[] = [
   {
     label: 'nav.group.ai',
     items: [
-      { href: '/brain', label: 'nav.brain', permission: 'brain.read', icon: 'sparkle' },
+      { href: '/assistant', label: 'nav.assistant', permission: 'ai.use', icon: 'sparkle' },
+      { href: '/prospecting', label: 'nav.prospecting', permission: 'ai.use', icon: 'search' },
+      { href: '/brain', label: 'nav.brain', permission: 'brain.read', icon: 'list' },
       { href: '/approvals', label: 'nav.approvals', permission: 'approvals.decide', icon: 'checkCircle' },
       { href: '/settings/ai', label: 'nav.aiSettings', permission: 'ai.runs.read', icon: 'sliders' },
     ],

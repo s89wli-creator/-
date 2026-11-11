@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Permission, TaskDto, VisitDto } from '@rakan/shared';
 import Link from 'next/link';
+import { AttentionCard } from '@/components/ai/Attention';
 import { Icon, type IconName } from '@/components/icons';
 import { Alert, Badge, Card, EmptyState, PageHeader, SectionTitle, formatTime } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -51,6 +52,7 @@ export default function HomePage() {
         <Alert tone="info">{t('home.noTenant')}</Alert>
       ) : (
         <div className="space-y-6">
+          <AttentionCard />
           {can('crm.visit.read') && (
             <div className="grid gap-4 lg:grid-cols-2">
               <Card>
