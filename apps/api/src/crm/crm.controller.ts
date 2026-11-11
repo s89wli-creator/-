@@ -17,6 +17,7 @@ import { badRequest } from '../common/errors';
 import { UuidPipe } from '../common/uuid.pipe';
 import { ZodPipe } from '../common/zod.pipe';
 import { AccountsService } from './accounts.service';
+import { AttentionService } from './attention.service';
 import { ImportsService } from './imports.service';
 import { OpportunitiesService } from './opportunities.service';
 import { ReportsService } from './reports.service';
@@ -413,5 +414,17 @@ export class ReportsController {
   @Get('dashboard')
   dashboard(@Auth() auth: TenantAuthContext, @Query(new ZodPipe(dashboardQuerySchema)) q: z.infer<typeof dashboardQuerySchema>) {
     return this.reports.dashboard(auth, q);
+  }
+}
+
+@Controller('crm')
+export class AttentionController {
+  constructor(private readonly attention: AttentionService) {}
+
+  /** Neglected customers and loose ends (rules, no AI). Reps: their own accounts. */
+  @RequirePermission('crm.account.read')
+  @Get('attention')
+  list(@Auth() auth: TenantAuthContext) {
+    return this.attention.list(auth);
   }
 }

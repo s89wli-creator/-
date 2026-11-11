@@ -10,7 +10,7 @@ export interface AiFixtures {
   A: { accountId: string };
   B: {
     itemId: string; documentId: string; scoreId: string; runId: string; visitId: string; completedVisitId: string; accountId: string;
-    contactId: string; draftId: string; approvalId: string; pendingDraftId: string;
+    contactId: string; draftId: string; approvalId: string; pendingDraftId: string; prospectId: string; searchId: string; conversationId: string;
   };
 }
 
@@ -34,12 +34,16 @@ export async function createAiFixtures(app: INestApplication, crm: CrmFixtures):
   const draft = (await b.post(`/ai/accounts/${crm.B.accountId}/follow-up`, { contactId: contact.id, channel: 'email' }).expect(201)).body;
   const pending = (await b.post(`/ai/accounts/${crm.B.accountId}/follow-up`, { contactId: contact.id, channel: 'email' }).expect(201)).body;
   const sub = (await b.post(`/ai/drafts/${pending.id}/submit`).expect(200)).body;
+  const search = (await b.post('/ai/prospecting/search', { query: 'شركات نقل للشركة ب' }).expect(201)).body;
+  const [prospect] = (await b.get('/ai/prospecting/prospects').expect(200)).body;
+  const conv = (await b.post('/ai/assistant/messages', { message: 'سر الشركة ب' }).expect(200)).body;
   const runs = (await b.get('/ai/runs').expect(200)).body;
   return {
     a, b, A: crm.A,
     B: {
       itemId: item.id, documentId: doc.id, scoreId: score.id, runId: runs[0].id, visitId: crm.B.visitId, completedVisitId: v.id,
       accountId: crm.B.accountId, contactId: contact.id, draftId: draft.id, approvalId: sub.approvalRequestId, pendingDraftId: pending.id,
+      prospectId: prospect.id, searchId: search.id, conversationId: conv.id,
     },
   };
 }
@@ -127,6 +131,41 @@ export function aiProbes(app: () => INestApplication, f: () => AiFixtures): Reco
       await notFound(f().a.delete(`/brain/documents/${f().B.documentId}`));
       expect(await ownerQuery('SELECT 1 FROM brain_documents WHERE id=$1', [f().B.documentId])).toHaveLength(1);
     },
+    'GET /api/crm/attention': async () => {
+      expect(JSON.stringify((await f().a.get('/crm/attention').expect(200)).body)).not.toContain(f().B.accountId);
+    },
+    'POST /api/ai/prospecting/search': async () => {
+      const s = (await f().a.post('/ai/prospecting/search', { query: 'شركات نقل عامة' }).expect(201)).body;
+      expect((await one('SELECT tenant_id FROM prospect_searches WHERE id=$1', [s.id]))!.tenant_id).not.toBe((await one('SELECT tenant_id FROM prospect_searches WHERE id=$1', [f().B.searchId]))!.tenant_id);
+    },
+    'POST /api/ai/prospecting/from-text': async () => {
+      const s = (await f().a.post('/ai/prospecting/from-text', { text: 'قائمة: مقترح عام في الرياض', sourceLabel: 'قائمة أ' }).expect(201)).body;
+      expect(s.id).not.toBe(f().B.searchId);
+    },
+    'GET /api/ai/prospecting/searches': async () => {
+      expect(JSON.stringify((await f().a.get('/ai/prospecting/searches').expect(200)).body)).not.toContain(f().B.searchId);
+    },
+    'GET /api/ai/prospecting/prospects': async () => {
+      const s = JSON.stringify((await f().a.get('/ai/prospecting/prospects').expect(200)).body);
+      expect(s).not.toContain(f().B.prospectId);
+      expect(s).not.toContain('مقترح الشركة ب');
+    },
+    'POST /api/ai/prospecting/prospects/:id/accept': async () => {
+      await notFound(f().a.post(`/ai/prospecting/prospects/${f().B.prospectId}/accept`));
+      expect((await one('SELECT status FROM prospects WHERE id=$1', [f().B.prospectId]))!.status).toBe('pending_review');
+    },
+    'POST /api/ai/prospecting/prospects/:id/reject': async () => {
+      await notFound(f().a.post(`/ai/prospecting/prospects/${f().B.prospectId}/reject`, { reason: 'hijack' }));
+      expect((await one('SELECT status FROM prospects WHERE id=$1', [f().B.prospectId]))!.status).toBe('pending_review');
+    },
+    'POST /api/ai/assistant/messages': async () => {
+      await notFound(f().a.post('/ai/assistant/messages', { conversationId: f().B.conversationId, message: 'اقرأ المحادثة' }));
+      expect((await ownerQuery('SELECT 1 FROM assistant_messages WHERE conversation_id=$1', [f().B.conversationId]))).toHaveLength(2);
+    },
+    'GET /api/ai/assistant/conversations': async () => {
+      expect(JSON.stringify((await f().a.get('/ai/assistant/conversations').expect(200)).body)).not.toContain(f().B.conversationId);
+    },
+    'GET /api/ai/assistant/conversations/:id': async () => notFound(f().a.get(`/ai/assistant/conversations/${f().B.conversationId}`)),
     'GET /api/approvals': async () => {
       expect(JSON.stringify((await f().a.get('/approvals').expect(200)).body)).not.toContain(f().B.approvalId);
     },

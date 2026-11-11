@@ -44,7 +44,7 @@ export const brainDocumentSchema = z.object({
 
 // ---------------------------------------------------------------- AI settings, approvals
 
-export const AGENTS = ['lead_intel', 'visit_brief', 'meeting_intel', 'follow_up'] as const;
+export const AGENTS = ['lead_intel', 'visit_brief', 'meeting_intel', 'follow_up', 'prospecting', 'assistant'] as const;
 export type AgentKey = (typeof AGENTS)[number];
 
 export const aiSettingsSchema = z.object({
@@ -143,3 +143,41 @@ export interface MessageDraftDto {
 
 export interface SessionDto { id: string; current: boolean; ip: string | null; userAgent: string | null; createdAt: string; lastSeenAt: string; mfaVerified: boolean }
 export interface SecurityDto { mfaEnabled: boolean; emailVerified: boolean; sessions: SessionDto[] }
+
+// ---------------------------------------------------------------- Prospecting
+
+export const prospectSearchSchema = z.object({
+  query: z.string().trim().min(5).max(300),
+  city: z.string().trim().max(80).optional(),
+  limit: z.number().int().min(1).max(10).default(5),
+});
+/** Text the company supplies (a directory page, an exhibitor list…) that it is allowed to use. */
+export const prospectManualSchema = z.object({
+  text: z.string().trim().min(20).max(20_000),
+  sourceLabel: z.string().trim().min(2).max(200),
+});
+export const prospectRejectSchema = z.object({ reason: z.string().trim().min(2).max(300) });
+
+export interface ProspectDto {
+  id: string; searchId: string; name: string; websiteDomain: string | null; city: string | null; region: string | null;
+  industry: string | null; phone: string | null; whyFit: string; fitEvidence: { text: string; ref: string; label: string }[];
+  sourceUrl: string; sourceTitle: string | null; retrievedAt: string; confidence: number;
+  duplicateOf: { id: string; name: string } | null; status: 'pending_review' | 'accepted' | 'rejected';
+  accountId: string | null; reviewedByName: string | null; rejectReason: string | null; createdAt: string;
+}
+export interface ProspectSearchDto {
+  id: string; query: string; city: string | null; source: 'web_search' | 'manual'; status: string; found: number;
+  dropped: { name: string; reason: string }[]; requestedByName: string | null; createdAt: string;
+}
+
+// ---------------------------------------------------------------- Ask Rakan
+
+export const assistantMessageSchema = z.object({
+  conversationId: z.string().uuid().optional(),
+  message: z.string().trim().min(1).max(2000),
+});
+export interface AssistantMessageDto {
+  id: number; role: 'user' | 'assistant'; content: string;
+  toolCalls: { tool: string; ok: boolean; summary: string }[]; links: { label: string; href: string }[]; createdAt: string;
+}
+export interface AssistantConversationDto { id: string; title: string; updatedAt: string; messages?: AssistantMessageDto[] }

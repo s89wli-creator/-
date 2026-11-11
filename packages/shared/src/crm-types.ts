@@ -17,6 +17,8 @@ export interface AccountDto {
   trackId: string | null; territoryId: string | null; ownerMembershipId: string | null; ownerName: string | null;
   status: string; disqualifyReason: string | null; leadSource: string; leadSourceDetail: string | null;
   customFields: Record<string, unknown>; lastActivityAt: string | null; createdAt: string;
+  /** Latest AI lead score (0–100) and tier, or the tier set by a reviewer. */
+  score: number | null; scoreTier: string | null;
   openOpportunities?: number;
 }
 export interface Paged<T> { items: T[]; total: number; page: number; pageSize: number }
@@ -83,4 +85,14 @@ export interface DashboardDto {
   byRep: { membershipId: string; name: string; visitsCompleted: number; tasksDone: number; won: number; openValue: number }[];
   lossReasons: { label: string; count: number }[];
   stageFunnel: { stageId: string; name: string; count: number; value: number }[];
+}
+
+/** Rule-based "needs attention" item (neglected customers). */
+export interface AttentionItemDto {
+  type: 'stale_deal' | 'overdue_task' | 'visit_without_follow_up' | 'hot_lead_untouched';
+  accountId: string | null; accountName: string | null; ownerName: string | null;
+  /** Days since the last activity / due date / visit. */
+  days: number | null;
+  detail: string; refId: string; amount: number | null;
+  suggestion: 'call_or_visit' | 'complete_task' | 'create_follow_up' | 'schedule_visit';
 }

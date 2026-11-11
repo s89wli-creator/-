@@ -5,7 +5,7 @@ import { and, eq, gte, sql } from 'drizzle-orm';
 import type { TenantAuthContext } from '../common/auth-context';
 import { DbService } from '../common/db.service';
 import { AppError } from '../common/errors';
-import { LLM_PROVIDER, costUsd, type LlmProvider, type LlmRequest } from './llm';
+import { LLM_PROVIDER, WEB_SEARCH_USD, costUsd, type ChatRequest, type ChatResult, type LlmProvider, type LlmRequest } from './llm';
 import { PlanService } from '../platform/plan.service';
 
 export type StepKind = 'context' | 'model_call' | 'validation' | 'tool_call' | 'guard_block' | 'approval_wait' | 'error';
@@ -15,6 +15,10 @@ export interface RunContext {
   auth: TenantAuthContext;
   /** Structured model call: checks the budget, records usage, fails closed on refusal/invalid output. */
   call<T>(req: Omit<LlmRequest<T>, 'agent'>): Promise<T>;
+  /** Same as call(), with web search; returns the pages the search actually returned. */
+  search<T>(req: Omit<LlmRequest<T>, 'agent'>): Promise<{ output: T; sources: { url: string; title: string }[] }>;
+  /** One tool-using turn (metered and budgeted like call()). */
+  chat(req: Omit<ChatRequest, 'agent'>): Promise<ChatResult>;
   step(kind: StepKind, name: string, detail?: Record<string, unknown>): Promise<void>;
 }
 
@@ -102,32 +106,47 @@ export class AiRuntimeService {
         await tx.insert(agentSteps).values({ tenantId: auth.tenantId, runId, kind, name, detail });
       });
 
+    /** Records usage + a model_call step; web searches are billed at the provider's per-search rate. */
+    const meter = async (res: { model: string; inputTokens: number; outputTokens: number; stopReason: string | null }, searches: number, started: number) => {
+      const cost = costUsd(res.model, res.inputTokens, res.outputTokens) + searches * WEB_SEARCH_USD;
+      totals.model = res.model;
+      totals.inputTokens += res.inputTokens;
+      totals.outputTokens += res.outputTokens;
+      totals.cost += cost;
+      await this.db.tenant(auth, async (tx) => {
+        await tx.insert(aiUsage).values({
+          tenantId: auth.tenantId, agentRunId: runId, provider: this.provider.name, model: res.model,
+          inputTokens: res.inputTokens, outputTokens: res.outputTokens, costUsd: cost,
+        });
+        await tx.insert(agentSteps).values({
+          tenantId: auth.tenantId, runId, kind: 'model_call', name: res.model,
+          detail: { ms: Date.now() - started, inputTokens: res.inputTokens, outputTokens: res.outputTokens, webSearches: searches, costUsd: cost, stopReason: res.stopReason },
+        });
+      });
+    };
+    const structured = async <R>(req: Omit<LlmRequest<R>, 'agent'>): Promise<{ output: R; sources: { url: string; title: string }[] }> => {
+      await this.db.tenant(auth, (tx) => this.assertCanSpend(tx, auth.tenantId, agent));
+      const started = Date.now();
+      const res = await this.provider.complete<R>({ ...req, agent });
+      await meter(res, res.webSearches ?? 0, started);
+      if (res.refused) throw new AppError(422, 'AI_REFUSED', 'The assistant declined this request');
+      if (res.output === null) throw new AppError(502, 'AI_INVALID_OUTPUT', 'The assistant returned an invalid answer');
+      return { output: res.output, sources: res.sources ?? [] };
+    };
+
     const ctx: RunContext = {
       runId,
       auth,
       step,
-      call: async <R>(req: Omit<LlmRequest<R>, 'agent'>): Promise<R> => {
+      call: async <R>(req: Omit<LlmRequest<R>, 'agent'>): Promise<R> => (await structured<R>(req)).output,
+      search: <R>(req: Omit<LlmRequest<R>, 'agent'>) => structured<R>(req),
+      chat: async (req: Omit<ChatRequest, 'agent'>): Promise<ChatResult> => {
         await this.db.tenant(auth, (tx) => this.assertCanSpend(tx, auth.tenantId, agent));
         const started = Date.now();
-        const res = await this.provider.complete<R>({ ...req, agent });
-        const cost = costUsd(res.model, res.inputTokens, res.outputTokens);
-        totals.model = res.model;
-        totals.inputTokens += res.inputTokens;
-        totals.outputTokens += res.outputTokens;
-        totals.cost += cost;
-        await this.db.tenant(auth, async (tx) => {
-          await tx.insert(aiUsage).values({
-            tenantId: auth.tenantId, agentRunId: runId, provider: this.provider.name, model: res.model,
-            inputTokens: res.inputTokens, outputTokens: res.outputTokens, costUsd: cost,
-          });
-          await tx.insert(agentSteps).values({
-            tenantId: auth.tenantId, runId, kind: 'model_call', name: res.model,
-            detail: { ms: Date.now() - started, inputTokens: res.inputTokens, outputTokens: res.outputTokens, costUsd: cost, stopReason: res.stopReason },
-          });
-        });
+        const res = await this.provider.chat({ ...req, agent });
+        await meter(res, 0, started);
         if (res.refused) throw new AppError(422, 'AI_REFUSED', 'The assistant declined this request');
-        if (res.output === null) throw new AppError(502, 'AI_INVALID_OUTPUT', 'The assistant returned an invalid answer');
-        return res.output;
+        return res;
       },
     };
 

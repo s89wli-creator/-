@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import {
   aiSettingsSchema, brainDocumentSchema, brainItemSchema, brainItemUpdateSchema, decisionSchema, draftUpdateSchema,
-  followUpRequestSchema, scoreReviewSchema, scoringWeightsSchema,
+  assistantMessageSchema, followUpRequestSchema, prospectManualSchema, prospectRejectSchema, prospectSearchSchema, scoreReviewSchema, scoringWeightsSchema,
 } from '@rakan/shared';
 import { z } from 'zod';
 import type { RequestMeta, TenantAuthContext } from '../common/auth-context';
@@ -12,11 +12,60 @@ import { AgentsService } from './agents.service';
 import { AiSettingsService } from './ai-settings.service';
 import { BrainService } from './brain.service';
 import { MessagingService } from './messaging.service';
+import { ProspectingService } from './prospecting.service';
+import { AssistantService } from './assistant.service';
 import { ToolGatewayService } from './tool-gateway.service';
 
 const runsQuery = z.object({ agent: z.string().max(40).optional(), entityId: z.string().uuid().optional() });
 const approvalsQuery = z.object({ status: z.enum(['pending', 'approved', 'rejected', 'expired', 'executed', 'execution_failed']).optional() });
 const followUpBody = followUpRequestSchema.extend({ visitId: z.string().uuid().optional() });
+const prospectsQuery = z.object({ status: z.enum(['pending_review', 'accepted', 'rejected']).optional() });
+
+/** Prospecting agent: proposals only; a person accepts each one before it becomes an account. */
+@Controller('ai/prospecting')
+export class ProspectingController {
+  constructor(private readonly prospecting: ProspectingService) {}
+
+  @RequirePermission('ai.use')
+  @HttpCode(201)
+  @Post('search')
+  search(@Auth() auth: TenantAuthContext, @Body(new ZodPipe(prospectSearchSchema)) body: z.infer<typeof prospectSearchSchema>, @Meta() meta: RequestMeta) {
+    return this.prospecting.search(auth, body, meta);
+  }
+
+  @RequirePermission('ai.use')
+  @HttpCode(201)
+  @Post('from-text')
+  fromText(@Auth() auth: TenantAuthContext, @Body(new ZodPipe(prospectManualSchema)) body: z.infer<typeof prospectManualSchema>, @Meta() meta: RequestMeta) {
+    return this.prospecting.fromText(auth, body, meta);
+  }
+
+  @RequirePermission('ai.use')
+  @Get('searches')
+  searches(@Auth() auth: TenantAuthContext) {
+    return this.prospecting.searches(auth);
+  }
+
+  @RequirePermission('ai.use')
+  @Get('prospects')
+  prospects(@Auth() auth: TenantAuthContext, @Query(new ZodPipe(prospectsQuery)) q: z.infer<typeof prospectsQuery>) {
+    return this.prospecting.list(auth, q.status);
+  }
+
+  @RequirePermission('crm.account.write')
+  @HttpCode(200)
+  @Post('prospects/:id/accept')
+  accept(@Auth() auth: TenantAuthContext, @Param('id', UuidPipe) id: string, @Meta() meta: RequestMeta) {
+    return this.prospecting.accept(auth, id, meta);
+  }
+
+  @RequirePermission('crm.account.write')
+  @HttpCode(200)
+  @Post('prospects/:id/reject')
+  reject(@Auth() auth: TenantAuthContext, @Param('id', UuidPipe) id: string, @Body(new ZodPipe(prospectRejectSchema)) body: { reason: string }, @Meta() meta: RequestMeta) {
+    return this.prospecting.reject(auth, id, body.reason, meta);
+  }
+}
 
 @Controller('ai')
 export class AiController {
@@ -222,5 +271,30 @@ export class ApprovalsController {
   @Post(':id/decision')
   decide(@Auth() auth: TenantAuthContext, @Param('id', UuidPipe) id: string, @Body(new ZodPipe(decisionSchema)) body: z.infer<typeof decisionSchema>, @Meta() meta: RequestMeta) {
     return this.gateway.decide(auth, id, body.decision, body.note, meta);
+  }
+}
+
+/** "Ask Rakan": conversations are private to their author. */
+@Controller('ai/assistant')
+export class AssistantController {
+  constructor(private readonly assistant: AssistantService) {}
+
+  @RequirePermission('ai.use')
+  @HttpCode(200)
+  @Post('messages')
+  ask(@Auth() auth: TenantAuthContext, @Body(new ZodPipe(assistantMessageSchema)) body: z.infer<typeof assistantMessageSchema>, @Meta() meta: RequestMeta) {
+    return this.assistant.ask(auth, body, meta);
+  }
+
+  @RequirePermission('ai.use')
+  @Get('conversations')
+  conversations(@Auth() auth: TenantAuthContext) {
+    return this.assistant.conversations(auth);
+  }
+
+  @RequirePermission('ai.use')
+  @Get('conversations/:id')
+  conversation(@Auth() auth: TenantAuthContext, @Param('id', UuidPipe) id: string) {
+    return this.assistant.conversation(auth, id);
   }
 }

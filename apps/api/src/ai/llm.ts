@@ -13,6 +13,8 @@ export interface LlmRequest<T> {
   schema: z.ZodType<T>;
   effort?: 'low' | 'medium' | 'high';
   maxTokens?: number;
+  /** Server-side web search (provider-run). Every result URL is returned in `sources` for verification. */
+  webSearch?: { maxUses: number; country?: string; city?: string };
 }
 
 export interface LlmResult<T> {
@@ -23,6 +25,24 @@ export interface LlmResult<T> {
   model: string;
   inputTokens: number;
   outputTokens: number;
+  /** Pages actually returned by web search during this call (the only acceptable citations). */
+  sources?: { url: string; title: string }[];
+  webSearches?: number;
+}
+
+// ---------------------------------------------------------------- tool-using conversation ("Ask Rakan")
+
+export type ChatBlock =
+  | { type: 'text'; text: string }
+  | { type: 'tool_use'; id: string; name: string; input: unknown }
+  | { type: 'tool_result'; toolUseId: string; content: string; isError?: boolean }
+  /** Provider-specific blocks (e.g. fallback markers) echoed back verbatim on the next turn. */
+  | { type: 'opaque'; data: unknown };
+export interface ChatMessage { role: 'user' | 'assistant'; content: ChatBlock[] }
+export interface ChatTool { name: string; description: string; inputSchema: Record<string, unknown> }
+export interface ChatRequest { agent: string; system: string; messages: ChatMessage[]; tools: ChatTool[]; maxTokens?: number; effort?: 'low' | 'medium' | 'high' }
+export interface ChatResult {
+  content: ChatBlock[]; stopReason: string | null; refused: boolean; model: string; inputTokens: number; outputTokens: number;
 }
 
 export interface LlmProvider {
@@ -30,7 +50,11 @@ export interface LlmProvider {
   /** False when no credentials are configured: AI features show as "not configured", never fake output. */
   readonly ready: boolean;
   complete<T>(req: LlmRequest<T>): Promise<LlmResult<T>>;
+  chat(req: ChatRequest): Promise<ChatResult>;
 }
+
+/** Provider web search price: USD per search (published rate: $10 per 1,000 searches). */
+export const WEB_SEARCH_USD = 0.01;
 
 export const LLM_PROVIDER = Symbol('LLM_PROVIDER');
 

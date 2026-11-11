@@ -27,7 +27,7 @@ export function toAccountDto(a: AccountRow, ownerName: string | null, openOpport
     city: a.city, address: a.address, lat: a.lat, lng: a.lng, trackId: a.trackId, territoryId: a.territoryId,
     ownerMembershipId: a.ownerMembershipId, ownerName, status: a.status, disqualifyReason: a.disqualifyReason,
     leadSource: a.leadSource, leadSourceDetail: a.leadSourceDetail, customFields: a.customFields,
-    lastActivityAt: a.lastActivityAt?.toISOString() ?? null, createdAt: a.createdAt.toISOString(),
+    lastActivityAt: a.lastActivityAt?.toISOString() ?? null, createdAt: a.createdAt.toISOString(), score: a.score, scoreTier: a.scoreTier,
     ...(openOpportunities !== undefined ? { openOpportunities } : {}),
   };
 }
@@ -69,6 +69,12 @@ export class AccountsService {
   ) {}
 
   /** Loads an account within tenant + scope. Throws 404 if missing or not visible. */
+  /** Account name by id (tenant-filtered); used to label duplicates without loading the whole record. */
+  async nameOf(tx: Tx, tenantId: string, id: string): Promise<string | null> {
+    const [a] = await tx.select({ name: accounts.name }).from(accounts).where(and(eq(accounts.tenantId, tenantId), eq(accounts.id, id))).limit(1);
+    return a?.name ?? null;
+  }
+
   async loadAccount(tx: Tx, auth: TenantAuthContext, scope: RecordScope, id: string, write = false): Promise<AccountRow> {
     const [a] = await tx
       .select()

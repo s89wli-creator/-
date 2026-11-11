@@ -8,3 +8,4 @@ export * from './schema-crm';
 export * from './schema-ai';
 export * from './schema-field';
 export * from './schema-platform';
+export * from './schema-agents';

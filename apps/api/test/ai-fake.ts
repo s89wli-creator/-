@@ -34,4 +34,12 @@ export function installDefaultAgents(f: FakeProvider): void {
     };
   });
   f.on('follow_up', () => ({ subject: 'متابعة زيارتنا', body: 'شكراً لوقتكم، نرغب بترتيب الخطوة التالية.', claims: [] }));
+  f.on('prospecting', (req) => ({
+    __sources: [{ url: 'https://dir.example.sa/p', title: 'P' }],
+    candidates: [{
+      name: req.prompt.includes('شركة ب') ? 'مقترح الشركة ب' : 'مقترح عام', website: null, city: null, region: null, industry: null, phone: null,
+      whyFit: 'مناسب', fitEvidence: [], sourceUrl: req.prompt.includes('<untrusted_data') ? 'manual' : 'https://dir.example.sa/p', confidence: 0.5,
+    }],
+  }));
+  f.onChat('assistant', () => [{ type: 'text', text: 'تم.' }]);
 }

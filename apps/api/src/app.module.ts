@@ -28,8 +28,9 @@ import { AccountsService } from './crm/accounts.service';
 import { ActivityService } from './crm/activity.service';
 import {
   AccountsController, ContactsNotesController, CrmSettingsController, ImportsController, OpportunitiesController,
-  ReportsController, TasksController, VisitsController,
+  ReportsController, TasksController, VisitsController, AttentionController,
 } from './crm/crm.controller';
+import { AttentionService } from './crm/attention.service';
 import { ImportsService } from './crm/imports.service';
 import { OpportunitiesService } from './crm/opportunities.service';
 import { ReportsService } from './crm/reports.service';
@@ -39,7 +40,9 @@ import { TasksService } from './crm/tasks.service';
 import { VisitsService } from './crm/visits.service';
 import { TenantService } from './tenancy/tenant.service';
 import { AgentsService } from './ai/agents.service';
-import { AiController, ApprovalsController, BrainController } from './ai/ai.controller';
+import { AiController, ApprovalsController, AssistantController, BrainController, ProspectingController } from './ai/ai.controller';
+import { AssistantService } from './ai/assistant.service';
+import { ProspectingService } from './ai/prospecting.service';
 import { AiSettingsService } from './ai/ai-settings.service';
 import { AnthropicProvider } from './ai/anthropic.provider';
 import { BrainService } from './ai/brain.service';
@@ -105,7 +108,7 @@ export class AppModule implements NestModule {
       controllers: [
         HealthController, AuthController, TenantController, TeamController, InvitationsController, AuditController,
         CrmSettingsController, AccountsController, ContactsNotesController, OpportunitiesController, TasksController,
-        VisitsController, ImportsController, ReportsController, AiController, BrainController, ApprovalsController,
+        VisitsController, ImportsController, ReportsController, AttentionController, AiController, BrainController, ApprovalsController, ProspectingController, AssistantController,
         FieldController, RecordingsController, PlatformController, TenantPlanController,
       ],
       providers: [
@@ -115,7 +118,7 @@ export class AppModule implements NestModule {
         ImportsService, ReportsService,
         { provide: LLM_PROVIDER, useValue: llmProvider(config) },
         AiRuntimeService, ToolGatewayService, AiSettingsService, BrainService, AgentsService, MessagingService,
-        StorageService, RecordingsService, PlanService, PlatformService,
+        StorageService, RecordingsService, PlanService, PlatformService, AttentionService, ProspectingService, AssistantService,
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
         // Order matters: rate limit -> CSRF -> session -> permission.
