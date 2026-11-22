@@ -10,3 +10,4 @@ export * from './schema-field';
 export * from './schema-platform';
 export * from './schema-agents';
 export * from './schema-proposals';
+export * from './schema-coach';

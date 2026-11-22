@@ -9,6 +9,7 @@ import { Logo, Symbol } from '@/components/brand/Logo';
 import { Icon, type IconName } from '@/components/icons';
 import { LoadingState, Select, cx } from '@/components/ui';
 import { useConfirm } from '@/components/feedback';
+import { NotificationBell } from '@/components/coach/NotificationBell';
 import { FieldSync } from '@/components/field/FieldSync';
 import { api, ApiError } from '@/lib/api';
 import { pendingRecordings } from '@/lib/field';
@@ -41,6 +42,7 @@ const GROUPS: { label?: MessageKey; items: NavItem[] }[] = [
     items: [
       { href: '/assistant', label: 'nav.assistant', permission: 'ai.use', icon: 'sparkle' },
       { href: '/prospecting', label: 'nav.prospecting', permission: 'ai.use', icon: 'search' },
+      { href: '/coach', label: 'nav.coach', permission: 'crm.visit.read', icon: 'chart' },
       { href: '/brain', label: 'nav.brain', permission: 'brain.read', icon: 'list' },
       { href: '/approvals', label: 'nav.approvals', permission: 'approvals.decide', icon: 'checkCircle' },
       { href: '/settings/ai', label: 'nav.aiSettings', permission: 'ai.runs.read', icon: 'sliders' },
@@ -57,6 +59,7 @@ const GROUPS: { label?: MessageKey; items: NavItem[] }[] = [
     label: 'nav.group.settings',
     items: [
       { href: '/settings/crm', label: 'nav.crmSettings', permission: 'crm.settings.manage', icon: 'sliders' },
+      { href: '/settings/automation', label: 'nav.automation', permission: 'crm.settings.manage', icon: 'calendar' },
       { href: '/settings/company', label: 'nav.company', permission: 'tenant.settings.read', icon: 'settings' },
       { href: '/settings/billing', label: 'nav.billing', permission: 'tenant.settings.read', icon: 'chart' },
       { href: '/settings/audit', label: 'nav.audit', permission: 'audit.read', icon: 'list' },
@@ -210,6 +213,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <p className="truncate text-xs text-fg-muted">{me.data.activeTenant?.name ?? '—'}</p>
     </div>
   );
+  const bell = me.data.activeTenant && <NotificationBell tone="petrol" />;
 
   const userPanel = (
     <div className="space-y-3 border-t border-line-soft pt-4">
@@ -256,7 +260,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Desktop sidebar */}
       <aside className="on-petrol sticky top-0 hidden h-dvh w-72 shrink-0 flex-col gap-6 overflow-y-auto p-4 lg:flex">
-        {brand}
+        <div className="flex items-start justify-between gap-2">{brand}{bell}</div>
         {tenantSwitcher}
         {navContent}
         <div className="mt-auto">{userPanel}</div>
@@ -268,6 +272,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <Symbol size={32} />
           <span className="truncate font-semibold">{me.data.activeTenant?.name ?? t('app.name')}</span>
         </div>
+        <div className="flex items-center">
+        {me.data.activeTenant && <NotificationBell />}
         <button
           className="grid size-11 place-items-center rounded-lg text-fg-sub transition-colors hover:bg-subtle-strong"
           aria-expanded={drawer === 'open'}
@@ -277,6 +283,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         >
           <Icon name="menu" />
         </button>
+        </div>
       </header>
 
       {/* Phone drawer (enters from the inline-start edge) */}

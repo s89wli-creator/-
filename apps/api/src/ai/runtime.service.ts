@@ -99,7 +99,7 @@ export class AiRuntimeService {
   async run<T>(
     auth: TenantAuthContext,
     agent: AgentKey,
-    opts: { entityType?: string; entityId?: string; input?: Record<string, unknown> },
+    opts: { entityType?: string; entityId?: string; input?: Record<string, unknown>; trigger?: 'user' | 'schedule' },
     body: (ctx: RunContext) => Promise<{ output: T; status?: 'succeeded' | 'awaiting_approval' }>,
   ): Promise<{ runId: string; output: T }> {
     const runId = await this.db.tenant(auth, async (tx) => {
@@ -107,7 +107,7 @@ export class AiRuntimeService {
       const [r] = await tx
         .insert(agentRuns)
         .values({
-          tenantId: auth.tenantId, agent, triggerType: 'user', triggeredBy: auth.userId,
+          tenantId: auth.tenantId, agent, triggerType: opts.trigger ?? 'user', triggeredBy: auth.userId,
           entityType: opts.entityType ?? null, entityId: opts.entityId ?? null, input: opts.input ?? {},
         })
         .returning({ id: agentRuns.id });

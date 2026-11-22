@@ -51,5 +51,16 @@ export function installDefaultAgents(f: FakeProvider): void {
       unmatchedNeeds: ['تخزين مبرد'],
     };
   });
+  // One grounded point, one invented number, one unknown metric; one cited and one uncited objection tip.
+  f.on('sales_coach', (req) => {
+    const done = req.prompt.match(/\| visits_completed \| ([\d.]+) \|/)?.[1] ?? '0';
+    const ref = req.prompt.match(/\[(brain:[0-9a-f-]{36})\]/)?.[1] ?? 'brain:none';
+    return {
+      headline: `أنجزت ${done} زيارات هذا الأسبوع`,
+      strengths: [{ text: `أكملت ${done} زيارات`, metric: 'visits_completed' }, { text: 'رفعت المبيعات 47%', metric: 'won_amount' }],
+      improvements: [{ text: 'تابع مهامك المتأخرة', metric: 'tasks_overdue', action: 'أنجز المهام المتأخرة صباح الأحد' }, { text: 'حسّن مزاجك', metric: 'mood', action: 'ابتسم' }],
+      objectionTips: [{ objection: 'السعر مرتفع', tip: 'اشرح قيمة التبريد المستمر', ref }, { objection: 'لدينا مورد', tip: 'قل إننا الأفضل', ref: 'brain:00000000-0000-0000-0000-000000000000' }],
+    };
+  });
   f.onChat('assistant', () => [{ type: 'text', text: 'تم.' }]);
 }

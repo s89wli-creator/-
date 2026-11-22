@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import {
-  accounts, activities, brainItems, contacts, opportunities, proposalItems, proposals, proposalSequences, tenants, users, type ProposalStatus, type Tx,
+  accounts, brainItems, contacts, opportunities, proposalItems, proposals, tenants, users, type ProposalStatus, type Tx,
 } from '@rakan/db';
 import {
   VAT_RATE, hasPermission, type PriceListItemDto, type ProposalDto, type ProposalItemDto, type ProposalSummaryDto, type ProposalWarning, type PublicProposalDto,

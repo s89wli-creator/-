@@ -7,6 +7,7 @@ import { IS_PUBLIC, PERMISSION, PLATFORM_ADMIN, TENANT_ISOLATION_EXEMPT } from '
 import { aiProbes, createAiFixtures, type AiFixtures } from './ai-probes';
 import { crmProbes, createCrmFixtures, type CrmFixtures } from './crm-probes';
 import { createFieldFixtures, fieldProbes, sharedIdempotencyKeyProbe, type FieldFixtures } from './field-probes';
+import { coachProbes, createCoachFixtures, type CoachFixtures } from './coach-probes';
 import { createProposalFixtures, proposalProbes, type ProposalFixtures } from './proposal-probes';
 import { addMember, ownerQuery, registerCompany, resetDb, startApp, type TestClient } from './helpers';
 
@@ -25,6 +26,7 @@ let crm: CrmFixtures;
 let ai: AiFixtures;
 let field: FieldFixtures;
 let proposals: ProposalFixtures;
+let coach: CoachFixtures;
 
 beforeAll(async () => {
   app = await startApp();
@@ -39,6 +41,7 @@ beforeAll(async () => {
   ai = await createAiFixtures(app, crm);
   field = await createFieldFixtures(crm);
   proposals = await createProposalFixtures(crm);
+  coach = await createCoachFixtures(crm, B.memberId);
 });
 afterAll(async () => app.close());
 
@@ -67,6 +70,7 @@ const PROBES: Record<string, () => Promise<void>> = {
   ...aiProbes(() => app, () => ai),
   ...fieldProbes(() => crm, () => field),
   ...proposalProbes(() => proposals),
+  ...coachProbes(() => coach),
   'GET /api/tenant/plan': async () => {
     const res = (await a.get('/tenant/plan').expect(200)).body;
     expect(res.usage.accounts).toBe((await ownerQuery<{ n: number }>('SELECT count(*)::int AS n FROM accounts WHERE tenant_id = $1 AND deleted_at IS NULL', [tenantA]))[0]!.n);

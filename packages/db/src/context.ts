@@ -5,10 +5,11 @@ import * as aiSchema from './schema-ai';
 import * as fieldSchema from './schema-field';
 import * as platformSchema from './schema-platform';
 import * as proposalsSchema from './schema-proposals';
+import * as coachSchema from './schema-coach';
 import * as agentsSchema from './schema-agents';
 import * as crmSchema from './schema-crm';
 
-const schema = { ...baseSchema, ...crmSchema, ...aiSchema, ...fieldSchema, ...platformSchema, ...agentsSchema, ...proposalsSchema };
+const schema = { ...baseSchema, ...crmSchema, ...aiSchema, ...fieldSchema, ...platformSchema, ...agentsSchema, ...proposalsSchema, ...coachSchema };
 
 export type Tx = NodePgDatabase<typeof schema> & { $client: PoolClient };
 

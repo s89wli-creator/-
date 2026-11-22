@@ -62,6 +62,10 @@ import { ElevenLabsProvider, FakeVoiceProvider, VOICE_PROVIDER, type VoiceProvid
 import { VoiceService } from './voice/voice.service';
 import { ProposalsController, PublicProposalsController } from './proposals/proposals.controller';
 import { ProposalsService } from './proposals/proposals.service';
+import { AutomationController, CoachController, NotificationsController } from './coach/coach.controller';
+import { CoachService } from './coach/coach.service';
+import { NotificationsService } from './coach/notifications.service';
+import { SchedulerService } from './coach/scheduler.service';
 
 function voiceProvider(config: AppConfig): VoiceProvider {
   const kind = config.VOICE_PROVIDER ?? (config.ELEVENLABS_API_KEY ? 'elevenlabs' : 'none');
@@ -120,7 +124,7 @@ export class AppModule implements NestModule {
         HealthController, AuthController, TenantController, TeamController, InvitationsController, AuditController,
         CrmSettingsController, AccountsController, ContactsNotesController, OpportunitiesController, TasksController,
         VisitsController, ImportsController, ReportsController, AttentionController, AiController, BrainController, ApprovalsController, ProspectingController, AssistantController,
-        FieldController, RecordingsController, PlatformController, TenantPlanController, VoiceController, PlatformVoiceController, ProposalsController, PublicProposalsController,
+        FieldController, RecordingsController, PlatformController, TenantPlanController, VoiceController, PlatformVoiceController, ProposalsController, PublicProposalsController, CoachController, AutomationController, NotificationsController,
       ],
       providers: [
         DbService, PasswordService, SessionService, MailService, AuditService, SecurityService,
@@ -130,7 +134,7 @@ export class AppModule implements NestModule {
         { provide: LLM_PROVIDER, useValue: llmProvider(config) },
         AiRuntimeService, ToolGatewayService, AiSettingsService, BrainService, AgentsService, MessagingService,
         StorageService, RecordingsService, PlanService, PlatformService, AttentionService, ProspectingService, AssistantService,
-        { provide: VOICE_PROVIDER, useValue: voiceProvider(config) }, VoiceService, ProposalsService,
+        { provide: VOICE_PROVIDER, useValue: voiceProvider(config) }, VoiceService, ProposalsService, CoachService, NotificationsService, SchedulerService,
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
         // Order matters: rate limit -> CSRF -> session -> permission.

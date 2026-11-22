@@ -30,6 +30,8 @@ const envSchema = z.object({
   AI_MODEL: z.string().default('claude-opus-5-5'),
   /** Encrypted file storage (visit recordings). Local disk for now; an in-Kingdom object store adapter later. */
   STORAGE_DIR: z.string().default('./var/storage'),
+  /** Scheduled agents: runs due jobs every minute. Defaults to on, except in tests. */
+  SCHEDULER_ENABLED: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
   /** Voice (spokesperson voice clone, speech in/out). Defaults to "elevenlabs" when ELEVENLABS_API_KEY is set. */
   VOICE_PROVIDER: z.enum(['elevenlabs', 'fake', 'none']).optional(),
   /** Server-side only. Never sent to the browser. */
