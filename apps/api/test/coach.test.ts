@@ -20,8 +20,9 @@ async function completedVisit(daysAgo: number, outcome = 'interested') {
   const v = (await rep.post('/crm/visits', { accountId, scheduledStart: inHours(0) }).expect(201)).body;
   await rep.post(`/crm/visits/${v.id}/check-in`, { lat: 24.7, lng: 46.6, accuracyM: 10 }).expect(200);
   await rep.post(`/crm/visits/${v.id}/complete`, { outcome, nextStep: 'none', interestLevel: 4 }).expect(200);
-  await ownerQuery(`UPDATE visits SET scheduled_start = now() - ($2 || ' days')::interval, check_in_at = now() - ($2 || ' days')::interval,
-    check_out_at = now() - ($2 || ' days')::interval + interval '30 minutes' WHERE id = $1`, [v.id, String(daysAgo)]);
+  // Noon (Riyadh) on that day, so the visit falls in the period whatever time the tests run.
+  const at = `((date_trunc('day', now() AT TIME ZONE 'Asia/Riyadh') - ($2 || ' days')::interval + interval '12 hours') AT TIME ZONE 'Asia/Riyadh')`;
+  await ownerQuery(`UPDATE visits SET scheduled_start = ${at}, check_in_at = ${at}, check_out_at = ${at} + interval '30 minutes' WHERE id = $1`, [v.id, String(daysAgo)]);
   return v.id as string;
 }
 
