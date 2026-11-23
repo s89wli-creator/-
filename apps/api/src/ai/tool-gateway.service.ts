@@ -1,12 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { approvalRequests, users } from '@rakan/db';
+import { approvalRequests, memberships, users } from '@rakan/db';
 import type { ApprovalDto } from '@rakan/shared';
-import { and, desc, eq, lt, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, ne, type SQL } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import type { RequestMeta, TenantAuthContext } from '../common/auth-context';
 import { DbService } from '../common/db.service';
 import { AppError, conflict, notFound } from '../common/errors';
 import { AuditService } from '../audit/audit.service';
+import { NotificationsService } from '../coach/notifications.service';
 
 /**
  * Risk levels (docs/02 §AI): READ and WRITE_INTERNAL run immediately; EXTERNAL (anything that leaves the
@@ -60,7 +61,24 @@ export class ToolGatewayService {
   constructor(
     private readonly db: DbService,
     private readonly audit: AuditService,
+    private readonly notes: NotificationsService,
   ) {}
+
+  /** Tells the people who can approve (owner/manager) that a request is waiting. */
+  private async alertApprovers(auth: TenantAuthContext, summary: string): Promise<void> {
+    const approvers = await this.db.tenant(auth, (tx) =>
+      tx
+        .select({ userId: memberships.userId })
+        .from(memberships)
+        .where(and(eq(memberships.tenantId, auth.tenantId), eq(memberships.status, 'active'), inArray(memberships.role, ['owner', 'manager']), ne(memberships.userId, auth.userId))),
+    );
+    for (const a of approvers) {
+      await this.notes
+        .notify({ tenantId: auth.tenantId, userId: a.userId, kind: 'approval', title: 'طلب موافقة جديد بانتظارك', body: `${summary}
+طلبه: ${auth.fullName}`, links: [{ label: 'الموافقات', href: '/approvals' }] })
+        .catch((e) => this.log.warn({ err: e }, 'approval alert failed'));
+    }
+  }
 
   register(tool: Tool<never>): void {
     this.tools.set(tool.name, tool as unknown as Tool);
@@ -101,6 +119,7 @@ export class ToolGatewayService {
       });
       return r!.id;
     });
+    await this.alertApprovers(auth, opts.summary);
     return { status: 'pending_approval', approvalId: id };
   }
 

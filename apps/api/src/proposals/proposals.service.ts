@@ -23,6 +23,7 @@ import { BASE_RULES, findForbidden, untrusted } from '../ai/guards';
 import { accountGrounding } from '../ai/context';
 import { AiRuntimeService } from '../ai/runtime.service';
 import { ToolGatewayService } from '../ai/tool-gateway.service';
+import { NotificationsService } from '../coach/notifications.service';
 
 type Row = typeof proposals.$inferSelect;
 type ItemInput = {
@@ -83,6 +84,7 @@ export class ProposalsService implements OnModuleInit {
     private readonly crypto: FieldCryptoService,
     private readonly mail: MailService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
+    private readonly notes: NotificationsService,
   ) {}
 
   onModuleInit(): void {
@@ -524,7 +526,7 @@ export class ProposalsService implements OnModuleInit {
   async publicDecide(token: string, input: { decision: 'accept' | 'decline'; name: string; note?: string }, meta: RequestMeta): Promise<PublicProposalDto> {
     const ref = await this.byToken(token);
     if (!ref) throw notFound('Proposal');
-    return this.db.run({ tenantId: ref.tenantId }, async (tx) => {
+    const out = await this.db.run({ tenantId: ref.tenantId }, async (tx) => {
       const [p] = await tx.select().from(proposals).where(and(eq(proposals.tenantId, ref.tenantId), eq(proposals.id, ref.id))).for('update');
       if (!p || !['sent', 'accepted', 'declined'].includes(p.status)) throw notFound('Proposal');
       if (p.status !== 'sent') throw conflict('ALREADY_DECIDED', 'This proposal was already answered');
@@ -543,7 +545,18 @@ export class ProposalsService implements OnModuleInit {
         tenantId: ref.tenantId, actorType: 'system', action: `proposal.customer_${input.decision}`, entityType: 'proposal', entityId: p.id,
         after: { by: input.name, note: input.note ?? null, total: p.total, version: p.version }, meta,
       });
-      return this.publicDto(tx, ref.tenantId, r!);
+      return { dto: await this.publicDto(tx, ref.tenantId, r!), owner: p.ownerUserId, id: p.id, number: p.number };
     });
+    if (out.owner) {
+      await this.notes
+        .notify({
+          tenantId: ref.tenantId, userId: out.owner, kind: 'proposal_decision',
+          title: input.decision === 'accept' ? `قبل العميل عرض السعر ${out.number}` : `اعتذر العميل عن عرض السعر ${out.number}`,
+          body: `${out.dto.customerName} · ${input.name}${input.note ? `\n«${input.note.slice(0, 300)}»` : ''}`,
+          links: [{ label: 'العرض', href: `/proposals/${out.id}` }],
+        })
+        .catch(() => undefined);
+    }
+    return out.dto;
   }
 }

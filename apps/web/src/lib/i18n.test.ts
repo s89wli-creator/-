@@ -8,6 +8,7 @@ import { arPlatform } from './i18n-platform';
 import { arProposals } from './i18n-proposals';
 import { arVoice } from './i18n-voice';
 import { arCoach } from './i18n-coach';
+import { arFiles } from './i18n-files';
 
 // Every error code the API can return must have a translation in both languages.
 const API_ERROR_CODES = [
@@ -23,7 +24,7 @@ describe('i18n', () => {
   it('feature dictionaries never reuse a key (a later one would silently replace the earlier text)', () => {
     const seen = new Map<string, string>();
     const dupes: string[] = [];
-    for (const [name, dict] of Object.entries({ arCrm, arAi, arField, arPlatform, arAgents, arVoice, arProposals, arCoach })) {
+    for (const [name, dict] of Object.entries({ arCrm, arAi, arField, arPlatform, arAgents, arVoice, arProposals, arCoach, arFiles })) {
       for (const k of Object.keys(dict)) {
         if (seen.has(k)) dupes.push(`${k} (${seen.get(k)} / ${name})`);
         seen.set(k, name);

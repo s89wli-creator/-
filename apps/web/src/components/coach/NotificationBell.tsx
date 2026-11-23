@@ -9,6 +9,7 @@ import { Icon } from '@/components/icons';
 import { cx, formatDate } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/providers';
+import { PushToggle } from './PushToggle';
 
 /** Bell with the unread count; opens the person's own notifications (from scheduled agents). */
 export function NotificationBell({ tone = 'default' }: { tone?: 'default' | 'petrol' }) {
@@ -89,6 +90,7 @@ export function NotificationBell({ tone = 'default' }: { tone?: 'default' | 'pet
               </li>
             ))}
           </ul>
+          <PushToggle />
         </div>,
         document.body,
       )}

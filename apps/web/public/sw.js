@@ -4,7 +4,7 @@
  * - Pages (navigations): network-first; the last good copy is served offline, else /offline.html.
  * - API calls are never cached here: the app stores data itself (IndexedDB, per user, wiped on sign-out).
  */
-const VERSION = 'rakan-v2';
+const VERSION = 'rakan-v3';
 const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
 
@@ -65,4 +65,44 @@ self.addEventListener('message', (event) => {
     );
   }
   if (event.data?.type === 'wipe') event.waitUntil(caches.delete(PAGES));
+});
+
+// ---------------------------------------------------------------- Push notifications
+// The payload carries only a short title and an in-app link; details are read in the app after sign-in.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = {};
+  }
+  const title = typeof data.title === 'string' && data.title ? data.title : 'راكان';
+  const url = typeof data.url === 'string' && data.url.startsWith('/') && !data.url.startsWith('//') ? data.url : '/home';
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: 'افتح راكان للتفاصيل',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      dir: 'rtl',
+      lang: 'ar',
+      tag: typeof data.tag === 'string' ? data.tag : undefined,
+      data: { url },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url ?? '/home';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if (new URL(c.url).origin === self.location.origin && 'focus' in c) {
+          c.navigate(url);
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    }),
+  );
 });

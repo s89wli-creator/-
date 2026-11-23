@@ -172,3 +172,14 @@ export async function apiBinary(path: string, body: Blob | undefined, headers: R
   if (!res.ok) await parse(res);
   return res;
 }
+
+/** multipart/form-data upload (attachments). */
+export async function apiForm<T>(path: string, form: FormData): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`/api${path}`, { method: 'POST', credentials: 'same-origin', body: form, headers: { 'x-csrf-token': await csrfToken(), accept: 'application/json' } });
+  } catch {
+    throw new ApiError(0, 'NETWORK', 'Network error');
+  }
+  return parse<T>(res);
+}

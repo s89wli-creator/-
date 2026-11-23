@@ -8,6 +8,7 @@ import { Suspense, use, useEffect, useMemo, useState } from 'react';
 import { useConfirm, useToast } from '@/components/feedback';
 import { Icon } from '@/components/icons';
 import { STATUS_TONE, money } from '@/components/proposals/ProposalDocument';
+import { Attachments } from '@/components/files/Attachments';
 import {
   Alert, BackLink, Badge, Button, ButtonLink, Card, CardHeading, ErrorState, Field, IconButton, Input, LoadingState, NoPermission, Select, Textarea, formatDate,
 } from '@/components/ui';
@@ -303,6 +304,7 @@ function Editor({ id }: { id: string }) {
               </dl>
             )}
           </Card>
+          <Attachments entityType="proposal" entityId={p.id} canWrite={can('crm.proposal.write') && p.status !== 'cancelled'} />
           {p.agentRunId && <p className="flex items-center gap-1 text-xs text-fg-muted"><Icon name="sparkle" size={16} /> {t('proposal.byAgent')}</p>}
         </div>
       </div>

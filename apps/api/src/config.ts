@@ -30,6 +30,11 @@ const envSchema = z.object({
   AI_MODEL: z.string().default('claude-opus-5-5'),
   /** Encrypted file storage (visit recordings). Local disk for now; an in-Kingdom object store adapter later. */
   STORAGE_DIR: z.string().default('./var/storage'),
+  /** Web Push (VAPID). Generate once: npx web-push generate-vapid-keys. Without them, push stays "not configured". */
+  VAPID_PUBLIC_KEY: z.string().optional(),
+  VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().default('mailto:support@rakan.local'),
+  PUSH_PROVIDER: z.enum(['vapid', 'fake']).optional(),
   /** Scheduled agents: runs due jobs every minute. Defaults to on, except in tests. */
   SCHEDULER_ENABLED: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
   /** Voice (spokesperson voice clone, speech in/out). Defaults to "elevenlabs" when ELEVENLABS_API_KEY is set. */
@@ -72,6 +77,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     parsed.data.PLATFORM_ADMIN_REQUIRE_MFA = true;
     if (parsed.data.AI_PROVIDER === 'fake') throw new Error('AI_PROVIDER=fake is for tests only');
     if (parsed.data.VOICE_PROVIDER === 'fake') throw new Error('VOICE_PROVIDER=fake is for tests only');
+    if (parsed.data.PUSH_PROVIDER === 'fake') throw new Error('PUSH_PROVIDER=fake is for tests only');
   }
   return parsed.data;
 }

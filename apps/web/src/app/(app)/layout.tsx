@@ -10,6 +10,7 @@ import { Icon, type IconName } from '@/components/icons';
 import { LoadingState, Select, cx } from '@/components/ui';
 import { useConfirm } from '@/components/feedback';
 import { NotificationBell } from '@/components/coach/NotificationBell';
+import { disablePush } from '@/lib/push';
 import { FieldSync } from '@/components/field/FieldSync';
 import { api, ApiError } from '@/lib/api';
 import { pendingRecordings } from '@/lib/field';
@@ -139,6 +140,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       if (waiting && !(await confirm({ title: t('field.logoutPendingTitle'), body: t('field.logoutPending', { n: waiting }), tone: 'danger', confirmLabel: t('auth.logout') }))) {
         throw new Error('cancelled');
       }
+      await disablePush();
       await api('/auth/logout', { method: 'POST' }).catch(() => undefined);
     },
     onSuccess: async () => {

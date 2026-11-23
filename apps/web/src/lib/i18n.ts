@@ -5,6 +5,7 @@ import { arAgents, enAgents } from './i18n-agents';
 import { arVoice, enVoice } from './i18n-voice';
 import { arProposals, enProposals } from './i18n-proposals';
 import { arCoach, enCoach } from './i18n-coach';
+import { arFiles, enFiles } from './i18n-files';
 import { arCrm, enCrm } from './i18n-crm';
 
 export type Locale = 'ar' | 'en';
@@ -152,7 +153,7 @@ const arBase = {
   'form.vat': 'الرقم الضريبي 15 رقماً يبدأ وينتهي بـ 3.',
 };
 
-const ar = { ...arBase, ...arCrm, ...arAi, ...arField, ...arPlatform, ...arAgents, ...arVoice, ...arProposals, ...arCoach };
+const ar = { ...arBase, ...arCrm, ...arAi, ...arField, ...arPlatform, ...arAgents, ...arVoice, ...arProposals, ...arCoach, ...arFiles };
 export type MessageKey = keyof typeof ar;
 
 const enBase: Record<keyof typeof arBase, string> = {
@@ -297,7 +298,7 @@ const enBase: Record<keyof typeof arBase, string> = {
   'form.vat': 'VAT number is 15 digits starting and ending with 3.',
 };
 
-const en: Record<MessageKey, string> = { ...enBase, ...enCrm, ...enAi, ...enField, ...enPlatform, ...enAgents, ...enVoice, ...enProposals, ...enCoach };
+const en: Record<MessageKey, string> = { ...enBase, ...enCrm, ...enAi, ...enField, ...enPlatform, ...enAgents, ...enVoice, ...enProposals, ...enCoach, ...enFiles };
 
 export const messages: Record<Locale, Record<MessageKey, string>> = { ar, en };
 
@@ -328,6 +329,8 @@ const AUDIT_ACTIONS: Record<string, { ar: string; en: string }> = {
   'platform.voice.set': { ar: 'إنشاء صوت راكان الرسمي (بموافقة صاحب الصوت)', en: "Rakan's official voice created (owner consented)" },
   'platform.voice.replace': { ar: 'استبدال صوت راكان الرسمي', en: "Rakan's official voice replaced" },
   'platform.voice.delete': { ar: 'حذف صوت راكان الرسمي', en: "Rakan's official voice deleted" },
+  'attachment.upload': { ar: 'إرفاق ملف', en: 'File attached' },
+  'attachment.delete': { ar: 'حذف ملف مرفق', en: 'Attachment deleted' },
   'automation.update': { ar: 'تعديل مهمة مجدولة', en: 'Scheduled agent changed' },
   'automation.run': { ar: 'تشغيل مهمة مجدولة يدوياً', en: 'Scheduled agent run manually' },
   'proposal.create': { ar: 'إنشاء عرض سعر', en: 'Proposal created' },

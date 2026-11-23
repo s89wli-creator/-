@@ -19,6 +19,7 @@ export function testConfig(overrides: Record<string, string> = {}): AppConfig {
     WEB_ORIGIN: 'http://localhost:3000',
     AI_PROVIDER: 'fake',
     VOICE_PROVIDER: 'fake',
+    PUSH_PROVIDER: 'fake',
     STORAGE_DIR: process.env.TEST_STORAGE_DIR ?? '/tmp/rakan-test-storage',
     ...overrides,
   });
@@ -97,6 +98,11 @@ export class TestClient {
   }
   delete(url: string) {
     return this.agent.delete(`/api${url}`).set('x-csrf-token', this.csrf);
+  }
+  uploadWith(url: string, fields: Record<string, string>, content: Buffer, filename: string) {
+    let r = this.agent.post(`/api${url}`).set('x-csrf-token', this.csrf);
+    for (const [k, v] of Object.entries(fields)) r = r.field(k, v);
+    return r.attach('file', content, filename);
   }
   upload(url: string, content: Buffer, filename: string) {
     return this.agent.post(`/api${url}`).set('x-csrf-token', this.csrf).attach('file', content, filename);

@@ -217,7 +217,7 @@ export class SchedulerService implements OnApplicationBootstrap, OnModuleDestroy
   }
 
   private async deliver(tenantId: string, m: Member, email: boolean, n: { kind: string; title: string; body: string; links: { label: string; href: string }[] }): Promise<boolean> {
-    await this.db.run({ tenantId }, (tx) => this.notes.add(tx, { tenantId, userId: m.userId, ...n }));
+    await this.notes.notify({ tenantId, userId: m.userId, ...n });
     if (!email) return false;
     const links = n.links.map((l) => `${l.label}: ${this.config.WEB_ORIGIN}${l.href}`).join('\n');
     await this.mail.send({ to: m.email, subject: `راكان — ${n.title}`, text: `${n.body}\n\n${links}` });

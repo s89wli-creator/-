@@ -16,13 +16,14 @@ import {
 } from '@/components/ui';
 import { useConfirm, useToast } from '@/components/feedback';
 import { NewProposalModal } from '@/components/proposals/NewProposal';
+import { Attachments } from '@/components/files/Attachments';
 import { STATUS_TONE as PROPOSAL_TONE, money } from '@/components/proposals/ProposalDocument';
 import { api, ApiError } from '@/lib/api';
 import { useCrmSettings } from '@/lib/crm';
 import type { MessageKey } from '@/lib/i18n';
 import { useCan, useI18n, useInvalidate, useMe } from '@/lib/providers';
 
-type Tab = 'overview' | 'ai' | 'contacts' | 'opportunities' | 'proposals' | 'visits' | 'tasks' | 'notes' | 'timeline';
+type Tab = 'overview' | 'ai' | 'contacts' | 'opportunities' | 'proposals' | 'files' | 'visits' | 'tasks' | 'notes' | 'timeline';
 
 export default function AccountPage() {
   const confirm = useConfirm();
@@ -103,6 +104,7 @@ export default function AccountPage() {
     { id: 'visits', label: t('accounts.tab.visits'), count: visits.data?.length },
     { id: 'tasks', label: t('accounts.tab.tasks'), count: tasks.data?.length },
     { id: 'notes', label: t('accounts.tab.notes'), count: notes.data?.length },
+    { id: 'files', label: t('files.title') },
     { id: 'timeline', label: t('accounts.tab.timeline') },
   ];
 
@@ -253,6 +255,8 @@ export default function AccountPage() {
           {newProposal && <NewProposalModal open accountId={id} onClose={() => setNewProposal(false)} />}
         </Card>
       )}
+
+      {tab === 'files' && <Card><Attachments bare entityType="account" entityId={id} canWrite={can('crm.account.write') && canWrite} /></Card>}
 
       {tab === 'visits' && (
         <Card>

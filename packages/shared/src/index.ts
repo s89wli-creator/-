@@ -8,3 +8,4 @@ export * from './ai';
 export * from './platform';
 export * from './proposals';
 export * from './coach';
+export * from './files';

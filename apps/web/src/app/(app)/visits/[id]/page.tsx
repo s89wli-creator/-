@@ -11,6 +11,7 @@ import { useConfirm, useToast } from '@/components/feedback';
 import { api, isQueued, type Queued } from '@/lib/api';
 import { writeCache } from '@/lib/offline';
 import { VoiceNotes } from '@/components/field/VoiceNotes';
+import { Attachments } from '@/components/files/Attachments';
 import { isoDaysFromNow } from '@/lib/crm';
 import type { MessageKey } from '@/lib/i18n';
 import { useCan, useI18n, useInvalidate, useMe } from '@/lib/providers';
@@ -214,6 +215,8 @@ export default function VisitPage() {
           {v.followUpTaskId && <Alert tone="success">{t('visits.followUpCreated')}</Alert>}
         </Card>
       )}
+
+      <div className="mt-4"><Attachments entityType="visit" entityId={v.id} canWrite={writable} /></div>
 
       {me.data?.activeTenant?.features?.recordingEnabled && v.status !== 'cancelled' && (
         <div className="mt-4"><VoiceNotes visitId={v.id} canWrite={writable} /></div>
