@@ -9,6 +9,7 @@ import { UuidPipe } from '../common/uuid.pipe';
 import { ZodPipe } from '../common/zod.pipe';
 import { AttachmentsService } from './attachments.service';
 import { PushService } from './push.service';
+import { BrandingService, LOGO_MAX_BYTES } from './branding.service';
 
 /** Attachments. The route needs crm.account.*; the service also checks the parent record's own permission and scope. */
 @Controller('crm/attachments')
@@ -78,5 +79,34 @@ export class PushController {
   @Post('subscriptions/remove')
   unsubscribe(@Auth() auth: TenantAuthContext, @Body(new ZodPipe(pushUnsubscribeSchema)) body: z.infer<typeof pushUnsubscribeSchema>) {
     return this.push.unsubscribe(auth, body.endpoint);
+  }
+}
+
+/** Company logo (proposals). Any member can see it; owners change it. */
+@Controller('tenant/logo')
+export class LogoController {
+  constructor(private readonly branding: BrandingService) {}
+
+  @RequirePermission('tenant.settings.read')
+  @Get()
+  async get(@Auth() auth: TenantAuthContext, @Res({ passthrough: true }) res: Response): Promise<StreamableFile> {
+    const l = await this.branding.get(auth.tenantId);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    return new StreamableFile(l.data, { type: l.mimeType, length: l.data.length });
+  }
+
+  @RequirePermission('tenant.settings.update')
+  @HttpCode(200)
+  @Post()
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: LOGO_MAX_BYTES, files: 1, fields: 2 } }))
+  set(@Auth() auth: TenantAuthContext, @UploadedFile() file: Express.Multer.File | undefined, @Meta() meta: RequestMeta) {
+    return this.branding.set(auth, file, meta);
+  }
+
+  @RequirePermission('tenant.settings.update')
+  @HttpCode(204)
+  @Delete()
+  remove(@Auth() auth: TenantAuthContext, @Meta() meta: RequestMeta) {
+    return this.branding.remove(auth, meta);
   }
 }

@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import {
-  accounts, brainItems, contacts, opportunities, proposalItems, proposals, tenants, users, type ProposalStatus, type Tx,
+  accounts, brainItems, contacts, memberships, opportunities, proposalItems, proposals, tasks, tenants, users, type ProposalStatus, type Tx,
 } from '@rakan/db';
 import {
   VAT_RATE, hasPermission, type PriceListItemDto, type ProposalDto, type ProposalItemDto, type ProposalSummaryDto, type ProposalWarning, type PublicProposalDto,
@@ -24,6 +24,7 @@ import { accountGrounding } from '../ai/context';
 import { AiRuntimeService } from '../ai/runtime.service';
 import { ToolGatewayService } from '../ai/tool-gateway.service';
 import { NotificationsService } from '../coach/notifications.service';
+import { BrandingService } from '../files/branding.service';
 
 type Row = typeof proposals.$inferSelect;
 type ItemInput = {
@@ -85,6 +86,7 @@ export class ProposalsService implements OnModuleInit {
     private readonly mail: MailService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly notes: NotificationsService,
+    private readonly branding: BrandingService,
   ) {}
 
   onModuleInit(): void {
@@ -503,10 +505,16 @@ export class ProposalsService implements OnModuleInit {
       number: p.number, title: p.title, intro: p.intro, terms: p.terms, currency: p.currency, vatRate: p.vatRate, subtotal: p.subtotal,
       discountTotal: p.discountTotal, vatAmount: p.vatAmount, total: p.total, validUntil: p.validUntil,
       expired: p.status === 'sent' && p.validUntil < todayRiyadh(), status: p.status as PublicProposalDto['status'],
-      companyName: t?.name ?? '', customerName: a?.name ?? '', preparedBy: o?.n ?? null,
+      companyName: t?.name ?? '', customerName: a?.name ?? '', preparedBy: o?.n ?? null, hasLogo: !!(await this.branding.meta(tenantId)),
       items: items.map((i) => ({ name: i.name, description: i.description, unit: i.unit, quantity: i.quantity, unitPrice: i.unitPrice, discountPct: i.discountPct, lineTotal: i.lineTotal })),
       sentAt: p.sentAt?.toISOString() ?? null, decidedAt: p.decidedAt?.toISOString() ?? null, decisionByName: p.decisionByName,
     };
+  }
+
+  async publicLogo(token: string): Promise<{ data: Buffer; mimeType: string }> {
+    const ref = await this.byToken(token);
+    if (!ref) throw notFound('Logo');
+    return this.branding.forProposal(ref.tenantId, ref.id);
   }
 
   async publicView(token: string): Promise<PublicProposalDto> {
@@ -541,6 +549,16 @@ export class ProposalsService implements OnModuleInit {
         tenantId: ref.tenantId, accountId: p.accountId, opportunityId: p.opportunityId, type: status === 'accepted' ? 'proposal_accepted' : 'proposal_declined',
         actorType: 'system', refType: 'proposal', refId: p.id, summary: `${p.number} · ${input.name}${input.note ? ` · ${input.note.slice(0, 200)}` : ''}`,
       });
+      if (status === 'accepted' && p.ownerUserId) {
+        // A person closes the deal (stage + win reason): Rakan only reminds them, it never closes it alone.
+        const [m] = await tx.select({ id: memberships.id }).from(memberships).where(and(eq(memberships.tenantId, ref.tenantId), eq(memberships.userId, p.ownerUserId), eq(memberships.status, 'active')));
+        if (m) {
+          await tx.insert(tasks).values({
+            tenantId: ref.tenantId, title: `قبل العميل عرض السعر ${p.number}: سجّل الصفقة كفوز وابدأ التعاقد`, type: 'follow_up', priority: 'high',
+            dueAt: new Date(Date.now() + 86400_000), assigneeMembershipId: m.id, accountId: p.accountId, opportunityId: p.opportunityId, createdByType: 'system',
+          });
+        }
+      }
       await this.audit.record(tx, {
         tenantId: ref.tenantId, actorType: 'system', action: `proposal.customer_${input.decision}`, entityType: 'proposal', entityId: p.id,
         after: { by: input.name, note: input.note ?? null, total: p.total, version: p.version }, meta,

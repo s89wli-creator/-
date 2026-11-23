@@ -14,7 +14,9 @@ export default function PrintProposalPage({ params }: { params: Promise<{ id: st
   const { t } = useI18n();
   const me = useMe();
   const q = useQuery({ queryKey: ['proposal', id], queryFn: () => api<ProposalDto>(`/crm/proposals/${id}`) });
-  if (q.isLoading || me.isLoading) return <div className="p-8"><LoadingState card /></div>;
+  const tenant = useQuery({ queryKey: ['tenant'], queryFn: () => api<{ settings: { logo?: { updatedAt: string } } }>('/tenant') });
+  const logo = tenant.data?.settings?.logo;
+  if (q.isLoading || me.isLoading || tenant.isLoading) return <div className="p-8"><LoadingState card /></div>;
   if (q.error) return <div className="p-8"><ErrorState error={q.error} /></div>;
   const p = q.data!;
   return (
@@ -25,7 +27,7 @@ export default function PrintProposalPage({ params }: { params: Promise<{ id: st
       <ProposalDocument
         doc={{
           ...p, companyName: me.data?.activeTenant?.name ?? '', customerName: p.account.name, contactName: p.contact?.name ?? null,
-          preparedBy: p.ownerName, sentAt: p.sentAt ?? p.updatedAt,
+          preparedBy: p.ownerName, sentAt: p.sentAt ?? p.updatedAt, logoUrl: logo ? `/api/tenant/logo?v=${encodeURIComponent(logo.updatedAt)}` : null,
         }}
       />
     </div>

@@ -91,7 +91,7 @@ export interface PriceListItemDto { id: string; product: string; price: number; 
 export interface PublicProposalDto {
   number: string; title: string; intro: string; terms: string; currency: string; vatRate: number;
   subtotal: number; discountTotal: number; vatAmount: number; total: number; validUntil: string; expired: boolean;
-  status: 'sent' | 'accepted' | 'declined' | 'cancelled'; companyName: string; customerName: string; preparedBy: string | null;
+  status: 'sent' | 'accepted' | 'declined' | 'cancelled'; companyName: string; customerName: string; preparedBy: string | null; hasLogo?: boolean;
   items: { name: string; description: string | null; unit: string | null; quantity: number; unitPrice: number; discountPct: number; lineTotal: number }[];
   sentAt: string | null; decidedAt: string | null; decisionByName: string | null;
 }

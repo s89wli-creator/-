@@ -1,10 +1,11 @@
 'use client';
 
 import type { ProposalStatusKey, PublicProposalDto } from '@rakan/shared';
+import { useState } from 'react';
 import { useI18n } from '@/lib/providers';
 import { formatDate } from '@/components/ui';
 
-export type ProposalDoc = Omit<PublicProposalDto, 'status' | 'decidedAt' | 'decisionByName' | 'expired'> & { contactName?: string | null };
+export type ProposalDoc = Omit<PublicProposalDto, 'status' | 'decidedAt' | 'decisionByName' | 'expired'> & { contactName?: string | null; logoUrl?: string | null };
 
 export const money = (n: number, currency = 'SAR', locale: 'ar' | 'en' = 'ar') =>
   `${new Intl.NumberFormat(locale === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} ${locale === 'ar' && currency === 'SAR' ? 'ر.س' : currency}`;
@@ -16,13 +17,17 @@ export const STATUS_TONE: Record<ProposalStatusKey, 'muted' | 'accent' | 'brand'
 /** The proposal as the customer sees it: used for printing (PDF) and the customer link. */
 export function ProposalDocument({ doc }: { doc: ProposalDoc }) {
   const { t, locale } = useI18n();
+  const [logoOk, setLogoOk] = useState(true);
   const m = (n: number) => money(n, doc.currency, locale);
   return (
     <article className="proposal-doc mx-auto max-w-3xl space-y-6 bg-surface p-6 text-fg sm:p-10 print:max-w-none print:p-0">
       <header className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-petrol pb-5">
-        <div>
+        <div className="flex items-center gap-3">
+          {doc.logoUrl && logoOk && <img src={doc.logoUrl} alt={t('logo.alt', { name: doc.companyName })} className="max-h-16 max-w-40 object-contain" onError={() => setLogoOk(false)} />}
+          <div>
           <p className="font-display text-2xl font-bold text-petrol">{doc.companyName}</p>
           {doc.preparedBy && <p className="text-sm text-fg-muted">{t('proposal.preparedBy', { name: doc.preparedBy })}</p>}
+          </div>
         </div>
         <div className="text-end text-sm">
           <p className="font-display text-xl font-semibold">{t('public.title')}</p>

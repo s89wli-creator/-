@@ -122,9 +122,9 @@ async function noOverflow(page, name) {
   await owner.getByRole('dialog').getByRole('button', { name: 'حفظ' }).click();
   await owner.getByText('عقد نقل مبرد سنوي').waitFor();
 
-  // Schedule a visit today (in 1 hour) linked to the opportunity
+  // Schedule a visit today (in 2 minutes, so it stays 'today' even late in the evening) linked to the opportunity
   await owner.getByRole('button', { name: 'جدولة زيارة' }).click();
-  const inOneHour = new Date(Date.now() + 3600_000 + 3 * 3600_000).toISOString().slice(0, 16);
+  const inOneHour = new Date(Date.now() + 2 * 60_000 + 3 * 3600_000).toISOString().slice(0, 16);
   await owner.fill('#visit-start', inOneHour);
   await owner.selectOption('#visit-opp', { label: 'عقد نقل مبرد سنوي' });
   await owner.fill('#visit-purpose', 'عرض خدمة النقل المبرد');

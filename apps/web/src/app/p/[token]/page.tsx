@@ -44,7 +44,7 @@ export default function PublicProposalPage({ params }: { params: Promise<{ token
     <main className="min-h-dvh bg-subtle py-6 print:bg-white">
       <div className="mx-auto max-w-3xl space-y-4 px-4">
         <div className="overflow-hidden rounded-2xl border border-line shadow-sm print:border-0 print:shadow-none">
-          <ProposalDocument doc={p} />
+          <ProposalDocument doc={{ ...p, logoUrl: p.hasLogo ? `/api/public/proposals/${encodeURIComponent(token)}/logo` : null }} />
         </div>
 
         <section className="rounded-2xl border border-line bg-surface p-5 sm:p-6 print:hidden" aria-live="polite">

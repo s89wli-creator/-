@@ -2,10 +2,10 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tenantSettingsSchema, type TenantDto } from '@rakan/shared';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { useToast } from '@/components/feedback';
-import { Alert, Button, Card, ErrorState, Field, Input, LoadingState, NoPermission, PageHeader, Select } from '@/components/ui';
-import { api } from '@/lib/api';
+import { Alert, Button, Card, CardHeading, ErrorState, Field, Input, LoadingState, NoPermission, PageHeader, Select } from '@/components/ui';
+import { api, apiForm } from '@/lib/api';
 import { validate, type FieldErrors } from '@/lib/forms';
 import { useCan, useI18n } from '@/lib/providers';
 
@@ -117,6 +117,42 @@ export default function CompanySettingsPage() {
           )}
         </form>
       </Card>
+      <LogoCard editable={editable} />
     </>
+  );
+}
+
+function LogoCard({ editable }: { editable: boolean }) {
+  const { t, err } = useI18n();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const input = useRef<HTMLInputElement>(null);
+  const tenant = useQuery({ queryKey: ['tenant'], queryFn: () => api<{ name: string; settings: { logo?: { updatedAt: string } } }>('/tenant') });
+  const logo = tenant.data?.settings?.logo;
+  const done = (msg: string) => { void qc.invalidateQueries({ queryKey: ['tenant'] }); toast(msg); };
+  const up = useMutation({
+    mutationFn: (f: File) => { const fd = new FormData(); fd.set('file', f); return apiForm('/tenant/logo', fd); },
+    onSuccess: () => done(t('logo.saved')),
+  });
+  const rm = useMutation({ mutationFn: () => api('/tenant/logo', { method: 'DELETE' }), onSuccess: () => done(t('logo.removed')) });
+  return (
+    <Card className="mt-5 p-5 sm:p-6">
+      <CardHeading>{t('logo.title')}</CardHeading>
+      <p className="mb-4 text-sm text-fg-muted">{t('logo.hint')}</p>
+      {(up.error || rm.error) && <div className="mb-3"><Alert tone="error">{err(up.error ?? rm.error)}</Alert></div>}
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="grid h-20 w-40 place-items-center rounded-xl border border-line bg-white p-2">
+          {logo ? <img src={`/api/tenant/logo?v=${encodeURIComponent(logo.updatedAt)}`} alt={t('logo.alt', { name: tenant.data?.name ?? '' })} className="max-h-16 max-w-36 object-contain" /> : <span className="text-xs text-fg-muted">{t('logo.none')}</span>}
+        </div>
+        {editable && (
+          <div className="flex flex-wrap gap-2">
+            <input ref={input} type="file" accept=".png,.jpg,.jpeg,.webp" className="sr-only" aria-label={t('logo.upload')}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) up.mutate(f); e.target.value = ''; }} />
+            <Button variant="secondary" icon="upload" loading={up.isPending} onClick={() => input.current?.click()}>{t('logo.upload')}</Button>
+            {logo && <Button variant="ghost" loading={rm.isPending} onClick={() => rm.mutate()}>{t('logo.remove')}</Button>}
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }

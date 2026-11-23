@@ -172,3 +172,65 @@ describe('proposal agent', () => {
     expect(fake(app).calls).toHaveLength(0);
   });
 });
+
+describe('closing the loop and branding', () => {
+  const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(200, 1)]);
+  const SVG = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+
+  async function sendAndAccept() {
+    const opp = (await owner.post('/crm/opportunities', { accountId, title: 'صفقة النقل', amount: 1000 }).expect(201)).body;
+    const p = (await owner.post('/crm/proposals', { accountId, opportunityId: opp.id, title: 'عرض', items: [{ brainItemId: price.id, quantity: 1 }] }).expect(201)).body;
+    const sub = (await owner.post(`/crm/proposals/${p.id}/submit`).expect(200)).body;
+    await owner.post(`/approvals/${sub.approvalRequestId}/decision`, { decision: 'approve' }).expect(200);
+    const token = tokenOf((await owner.get(`/crm/proposals/${p.id}`).expect(200)).body.shareUrl);
+    return { opp, p, token };
+  }
+
+  it('acceptance gives the owner a high-priority task to close the deal; the deal is not closed automatically', async () => {
+    const { opp, p, token } = await sendAndAccept();
+    const anon = await client(app);
+    await anon.post(`/public/proposals/${token}/decision`, { decision: 'accept', name: 'أحمد' }).expect(200);
+    const tasks = (await owner.get(`/crm/tasks?view=all&accountId=${accountId}`).expect(200)).body as { title: string; priority: string; opportunityId: string }[];
+    expect(tasks).toEqual([expect.objectContaining({ title: `قبل العميل عرض السعر ${p.number}: سجّل الصفقة كفوز وابدأ التعاقد`, priority: 'high', opportunityId: opp.id })]);
+    expect((await owner.get(`/crm/opportunities/${opp.id}`).expect(200)).body.stageCategory).toBe('open');
+    expect((await owner.get('/notifications').expect(200)).body.items[0].title).toBe(`قبل العميل عرض السعر ${p.number}`);
+  });
+
+  it('company logo: raster images only, shown on the customer link only for sent proposals', async () => {
+    await owner.get('/tenant/logo').expect(404);
+    expect((await owner.uploadWith('/tenant/logo', {}, SVG, 'logo.svg').expect(400)).body.error.code).toBe('ATTACHMENT_TYPE_NOT_ALLOWED');
+    expect((await owner.uploadWith('/tenant/logo', {}, Buffer.concat([PNG, Buffer.alloc(600 * 1024)]), 'big.png').expect(413)).status).toBe(413);
+    const { client: rep } = await addMember(app, owner, 'rep-logo@acme.sa', 'rep');
+    await rep.uploadWith('/tenant/logo', {}, PNG, 'logo.png').expect(403);
+    await owner.uploadWith('/tenant/logo', {}, PNG, 'logo.png').expect(200);
+    expect((await rep.get('/tenant/logo').expect(200)).headers['content-type']).toBe('image/png');
+
+    const { token } = await sendAndAccept();
+    const anon = await client(app);
+    expect((await anon.get(`/public/proposals/${token}`).expect(200)).body.hasLogo).toBe(true);
+    expect((await anon.get(`/public/proposals/${token}/logo`).expect(200)).headers['content-type']).toBe('image/png');
+    await anon.get('/public/proposals/not-a-real-token-at-all-xxxx/logo').expect(404);
+    await owner.delete('/tenant/logo').expect(204);
+    await anon.get(`/public/proposals/${token}/logo`).expect(404);
+  });
+
+  it('Ask Rakan can prepare a proposal draft (not sent) through the proposal agent', async () => {
+    let round = 0;
+    fake(app).onChat('assistant', (req) => {
+      round++;
+      if (round === 1) {
+        expect(req.tools.map((t) => t.name)).toContain('draft_proposal');
+        return [{ type: 'tool_use', id: 't1', name: 'draft_proposal', input: { accountId, request: 'ثلاث رحلات نقل مبرد' } }];
+      }
+      const result = JSON.parse((req.messages.at(-1)!.content[0] as { content: string }).content) as { number: string };
+      return [{ type: 'text', text: `جهّزت مسودة عرض السعر ${result.number}، وتحتاج مراجعتك وموافقة المدير قبل الإرسال.` }];
+    });
+    const c = (await owner.post('/ai/assistant/messages', { message: 'جهّز عرض سعر لمصنع الدمام' }).expect(200)).body;
+    const last = c.messages.at(-1);
+    expect(last.toolCalls).toEqual([expect.objectContaining({ tool: 'draft_proposal', ok: true })]);
+    expect(last.links[0].href).toMatch(/^\/proposals\/[0-9a-f-]{36}$/);
+    const [p] = (await owner.get('/crm/proposals').expect(200)).body;
+    expect(p).toMatchObject({ status: 'draft' });
+    expect(outbox(app).filter((m) => m.to === 'buyer@factory.sa')).toHaveLength(0);
+  });
+});

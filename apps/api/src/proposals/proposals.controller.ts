@@ -1,4 +1,5 @@
-import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   proposalCreateSchema, proposalDecisionSchema, proposalDraftAiSchema, proposalListQuerySchema, proposalUpdateSchema,
 } from '@rakan/shared';
@@ -77,6 +78,13 @@ export class ProposalsController {
 @Controller('public/proposals')
 export class PublicProposalsController {
   constructor(private readonly proposals: ProposalsService) {}
+
+  @Get(':token/logo')
+  async logo(@Param('token') token: string, @Res({ passthrough: true }) res: Response): Promise<StreamableFile> {
+    const l = await this.proposals.publicLogo(token);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    return new StreamableFile(l.data, { type: l.mimeType, length: l.data.length });
+  }
 
   @Get(':token')
   view(@Param('token') token: string) {

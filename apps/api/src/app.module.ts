@@ -67,7 +67,8 @@ import { CoachService } from './coach/coach.service';
 import { NotificationsService } from './coach/notifications.service';
 import { SchedulerService } from './coach/scheduler.service';
 import { AttachmentsService } from './files/attachments.service';
-import { AttachmentsController, PushController } from './files/files.controller';
+import { AttachmentsController, LogoController, PushController } from './files/files.controller';
+import { BrandingService } from './files/branding.service';
 import { FakePushSender, PUSH_SENDER, PushService, VapidSender, type PushSender } from './files/push.service';
 
 function pushSender(config: AppConfig): PushSender {
@@ -132,7 +133,7 @@ export class AppModule implements NestModule {
         HealthController, AuthController, TenantController, TeamController, InvitationsController, AuditController,
         CrmSettingsController, AccountsController, ContactsNotesController, OpportunitiesController, TasksController,
         VisitsController, ImportsController, ReportsController, AttentionController, AiController, BrainController, ApprovalsController, ProspectingController, AssistantController,
-        FieldController, RecordingsController, PlatformController, TenantPlanController, VoiceController, PlatformVoiceController, ProposalsController, PublicProposalsController, CoachController, AutomationController, NotificationsController, AttachmentsController, PushController,
+        FieldController, RecordingsController, PlatformController, TenantPlanController, VoiceController, PlatformVoiceController, ProposalsController, PublicProposalsController, CoachController, AutomationController, NotificationsController, AttachmentsController, PushController, LogoController,
       ],
       providers: [
         DbService, PasswordService, SessionService, MailService, AuditService, SecurityService,
@@ -143,7 +144,7 @@ export class AppModule implements NestModule {
         AiRuntimeService, ToolGatewayService, AiSettingsService, BrainService, AgentsService, MessagingService,
         StorageService, RecordingsService, PlanService, PlatformService, AttentionService, ProspectingService, AssistantService,
         { provide: VOICE_PROVIDER, useValue: voiceProvider(config) }, VoiceService, ProposalsService, CoachService, NotificationsService, SchedulerService,
-        AttachmentsService, PushService, { provide: PUSH_SENDER, useValue: pushSender(config) },
+        AttachmentsService, PushService, BrandingService, { provide: PUSH_SENDER, useValue: pushSender(config) },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
         // Order matters: rate limit -> CSRF -> session -> permission.

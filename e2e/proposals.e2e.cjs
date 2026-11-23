@@ -41,6 +41,14 @@ const assert = (c, m) => { if (!c) throw new Error(m); };
     await call(`/brain/items/${it.id}/approve`, 'POST');
   }
   const account = await call('/crm/accounts', 'POST', { name: 'مصنع ألبان الشرقية', city: 'الدمام' });
+  await call('/crm/opportunities', 'POST', { accountId: account.id, title: 'توريد نقل مبرد سنوي', amount: 1000 });
+
+  // Company logo (shown on the printed proposal and the customer page).
+  await page.goto(BASE + '/settings/company');
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+  await page.getByLabel('رفع الشعار').setInputFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
+  await toast('تم حفظ الشعار');
+  await page.getByRole('img', { name: 'شعار شركة النقل المبرد' }).waitFor();
   await call(`/crm/accounts/${account.id}/contacts`, 'POST', { fullName: 'خالد المشتريات', email: 'buyer@dairy.sa' });
 
   // New proposal from the customer page.
@@ -48,6 +56,7 @@ const assert = (c, m) => { if (!c) throw new Error(m); };
   await page.getByRole('tab', { name: /عروض الأسعار/ }).click();
   await page.getByRole('button', { name: 'عرض سعر جديد' }).click();
   await page.selectOption('#contactId', { label: 'خالد المشتريات' });
+  await page.selectOption('#opportunityId', { label: 'توريد نقل مبرد سنوي' });
   await page.fill('#title', 'عرض نقل مبرد شهري');
   await page.getByRole('button', { name: 'إنشاء المسودة' }).click();
   await page.waitForURL('**/proposals/*');
@@ -92,6 +101,7 @@ const assert = (c, m) => { if (!c) throw new Error(m); };
   c.on('pageerror', (e) => errors.push(`customer :: ${e.message}`));
   await c.goto(link.replace(/^https?:\/\/[^/]+/, BASE));
   await c.getByText('مصنع ألبان الشرقية').first().waitFor();
+  await c.getByRole('img', { name: 'شعار شركة النقل المبرد' }).waitFor();
   await c.getByText('4,105.50').first().waitFor();
   const overflow = await c.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
   assert(!overflow, 'horizontal overflow on the customer page (phone)');
@@ -106,6 +116,15 @@ const assert = (c, m) => { if (!c) throw new Error(m); };
   await page.reload();
   await page.getByText('قبله العميل').first().waitFor();
   await page.getByText('رد العميل: خالد المشتريات').waitFor();
+
+  // A person closes the deal as won (with a win reason), optionally with the proposal amount.
+  await page.getByRole('button', { name: /حدّث قيمة الصفقة إلى/ }).click();
+  await toast('تم تحديث قيمة الصفقة');
+  await page.getByRole('button', { name: 'سجّل الصفقة كفوز' }).click();
+  await page.locator('#mv-reason').selectOption({ index: 1 });
+  await page.getByRole('dialog').getByRole('button', { name: 'تأكيد' }).click();
+  await page.getByText('الصفقة مسجّلة كفوز').first().waitFor();
+  log('deal marked won by a person, amount from the proposal');
 
   // Print view (PDF from the browser).
   await page.goto(page.url().replace('/proposals/', '/print/proposals/'));

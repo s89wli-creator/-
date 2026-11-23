@@ -329,6 +329,8 @@ const AUDIT_ACTIONS: Record<string, { ar: string; en: string }> = {
   'platform.voice.set': { ar: 'إنشاء صوت راكان الرسمي (بموافقة صاحب الصوت)', en: "Rakan's official voice created (owner consented)" },
   'platform.voice.replace': { ar: 'استبدال صوت راكان الرسمي', en: "Rakan's official voice replaced" },
   'platform.voice.delete': { ar: 'حذف صوت راكان الرسمي', en: "Rakan's official voice deleted" },
+  'tenant.logo.set': { ar: 'تغيير شعار الشركة', en: 'Company logo changed' },
+  'tenant.logo.remove': { ar: 'إزالة شعار الشركة', en: 'Company logo removed' },
   'attachment.upload': { ar: 'إرفاق ملف', en: 'File attached' },
   'attachment.delete': { ar: 'حذف ملف مرفق', en: 'Attachment deleted' },
   'automation.update': { ar: 'تعديل مهمة مجدولة', en: 'Scheduled agent changed' },

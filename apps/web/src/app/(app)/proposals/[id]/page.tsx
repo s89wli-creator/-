@@ -9,8 +9,10 @@ import { useConfirm, useToast } from '@/components/feedback';
 import { Icon } from '@/components/icons';
 import { STATUS_TONE, money } from '@/components/proposals/ProposalDocument';
 import { Attachments } from '@/components/files/Attachments';
+import { MoveStageForm } from '@/components/crm/forms';
+import { useCrmSettings } from '@/lib/crm';
 import {
-  Alert, BackLink, Badge, Button, ButtonLink, Card, CardHeading, ErrorState, Field, IconButton, Input, LoadingState, NoPermission, Select, Textarea, formatDate,
+  Alert, BackLink, Badge, Button, ButtonLink, Card, CardHeading, ErrorState, Field, IconButton, Input, LoadingState, Modal, NoPermission, Select, Textarea, formatDate,
 } from '@/components/ui';
 import { api } from '@/lib/api';
 import type { MessageKey } from '@/lib/i18n';
@@ -155,6 +157,8 @@ function Editor({ id }: { id: string }) {
           <ul className="mt-1 list-disc ps-5">{p.warnings.map((w, i) => <li key={i}>{warningText(t, w, locale)}</li>)}</ul>
         </Alert>
       )}
+
+      {p.status === 'accepted' && p.opportunity && <CloseWonCard proposal={p} />}
 
       {p.shareUrl && (
         <Card className="space-y-3 p-5">
@@ -309,6 +313,43 @@ function Editor({ id }: { id: string }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/** After the customer accepts: a person marks the deal as won (stage + win reason), optionally with the proposal amount. */
+function CloseWonCard({ proposal }: { proposal: ProposalDto }) {
+  const { t, err, locale } = useI18n();
+  const can = useCan();
+  const toast = useToast();
+  const qc = useQueryClient();
+  const settings = useCrmSettings();
+  const [open, setOpen] = useState(false);
+  const opp = useQuery({ queryKey: ['opportunity', proposal.opportunity!.id], queryFn: () => api<OpportunityDto>(`/crm/opportunities/${proposal.opportunity!.id}`) });
+  const amount = useMutation({
+    mutationFn: () => api<OpportunityDto>(`/crm/opportunities/${proposal.opportunity!.id}`, { method: 'PATCH', body: { amount: proposal.subtotal } }),
+    onSuccess: (o) => { qc.setQueryData(['opportunity', o.id], o); toast(t('proposal.amountUpdated')); },
+  });
+  if (!opp.data || !can('crm.opportunity.write')) return null;
+  const o = opp.data;
+  const pipeline = settings.data?.pipelines.find((x) => x.id === o.pipelineId);
+  const won = pipeline?.stages.find((s) => s.category === 'won');
+  if (o.stageCategory === 'won') return <Alert tone="success">{t('proposal.dealWon')}: {o.title}</Alert>;
+  if (o.stageCategory !== 'open' || !pipeline || !won) return null;
+  return (
+    <Card className="space-y-3 border-success/40 p-5">
+      <p className="text-sm text-fg-sub">{t('proposal.closeWonHint')}</p>
+      {amount.error && <Alert tone="error">{err(amount.error)}</Alert>}
+      <div className="flex flex-wrap gap-2">
+        <Button icon="checkCircle" onClick={() => setOpen(true)}>{t('proposal.closeWon')}</Button>
+        {o.amount !== proposal.subtotal && (
+          <Button variant="secondary" loading={amount.isPending} onClick={() => amount.mutate()}>{t('proposal.updateAmount', { amount: money(proposal.subtotal, proposal.currency, locale) })}</Button>
+        )}
+      </div>
+      <Modal open={open} onClose={() => setOpen(false)} title={t('proposal.closeWon')}>
+        <MoveStageForm opportunity={o} pipeline={pipeline} targetStageId={won.id} onCancel={() => setOpen(false)}
+          onDone={(x) => { setOpen(false); qc.setQueryData(['opportunity', x.id], x); void qc.invalidateQueries({ queryKey: ['opps'] }); toast(t('proposal.dealWon')); }} />
+      </Modal>
+    </Card>
   );
 }
 
