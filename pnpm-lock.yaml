@@ -150,6 +150,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@fontsource/alexandria':
+        specifier: 5.2.8
+        version: 5.2.8
+      '@fontsource/ibm-plex-sans-arabic':
+        specifier: 5.2.8
+        version: 5.2.8
       '@rakan/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -679,6 +685,12 @@ packages:
 
   '@fast-csv/parse@4.3.6':
     resolution: {integrity: sha512-uRsLYksqpbDmWaSmzvJcuApSEe38+6NQZBUsuAyMZKqHxH0g1wcJgsKUvN3WC8tewaqFjBMMGrkHmC+T7k8LvA==}
+
+  '@fontsource/alexandria@5.2.8':
+    resolution: {integrity: sha512-fEG//tSkzPcPcP443PHxXHxZCIQgIQxuHYB/TXOhjo4s0jeNZvUbPgsgpQSVDIQCtCJ+ZuOl4OUSdjCUd4SB0g==}
+
+  '@fontsource/ibm-plex-sans-arabic@5.2.8':
+    resolution: {integrity: sha512-zqBKzZt6WTnCEUlgnRMQ7arRjd0t59gEWWIcIgQIQNThsHMp36i9/4X5YvpmTZs33oJO6hQvLSTkh001XsgzoQ==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -4121,6 +4133,10 @@ snapshots:
       lodash.isnil: 4.0.0
       lodash.isundefined: 3.0.1
       lodash.uniq: 4.5.0
+
+  '@fontsource/alexandria@5.2.8': {}
+
+  '@fontsource/ibm-plex-sans-arabic@5.2.8': {}
 
   '@humanfs/core@0.19.2':
     dependencies:

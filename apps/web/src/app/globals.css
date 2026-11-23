@@ -7,9 +7,9 @@
  */
 
 @theme inline {
-  --font-sans: var(--font-plex-arabic), ui-sans-serif, system-ui, "Segoe UI", Tahoma, sans-serif;
+  --font-sans: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, "Segoe UI", Tahoma, sans-serif;
   /* Identity 1.0: Alexandria for headings and Latin display text; IBM Plex Sans Arabic for body and UI. */
-  --font-display: var(--font-alexandria), var(--font-plex-arabic), ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Alexandria", "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
 
   --color-page: var(--page);
   --color-surface: var(--surface);

@@ -10,6 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fontsource/alexandria": "5.2.8",
+    "@fontsource/ibm-plex-sans-arabic": "5.2.8",
     "@rakan/shared": "workspace:*",
     "@tanstack/react-query": "5.89.0",
     "next": "15.5.28",
