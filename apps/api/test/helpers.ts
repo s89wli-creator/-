@@ -21,7 +21,7 @@ export function testConfig(overrides: Record<string, string> = {}): AppConfig {
     VOICE_PROVIDER: 'fake',
     PUSH_PROVIDER: 'fake',
     PAYMENTS_PROVIDER: 'fake',
-    MOYASAR_WEBHOOK_SECRET: 'whsec_test_secret',
+    EDFAPAY_WEBHOOK_SECRET: 'whsec_test_secret',
     STORAGE_DIR: process.env.TEST_STORAGE_DIR ?? '/tmp/rakan-test-storage',
     ...overrides,
   });

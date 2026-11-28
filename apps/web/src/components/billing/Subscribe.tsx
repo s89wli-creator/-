@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@/components/feedback';
 import { Icon } from '@/components/icons';
-import { Alert, Badge, Button, Card, CardHeading, LoadingState, cx, formatDate } from '@/components/ui';
+import { Alert, Badge, Button, Card, CardHeading, Field, Input, LoadingState, cx, formatDate } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/providers';
 
@@ -15,7 +15,9 @@ const sar = (n: number, locale: 'ar' | 'en') =>
   `${new Intl.NumberFormat(locale === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)} ${locale === 'ar' ? 'ر.س' : 'SAR'}`;
 const TONE: Record<BillingInvoiceDto['status'], 'accent' | 'success' | 'danger' | 'muted'> = { pending: 'accent', paid: 'success', failed: 'danger', expired: 'muted', canceled: 'muted' };
 
-/** Plans and online payment (Moyasar hosted page), plus the payment history. */
+const PHONE_RE = /^(\+966|00966|966|0)?5\d{8}$/;
+
+/** Plans and online payment (EdfaPay hosted checkout), plus the payment history. */
 export function Subscribe() {
   const { t, err, locale } = useI18n();
   const toast = useToast();
@@ -23,9 +25,11 @@ export function Subscribe() {
   const router = useRouter();
   const params = useSearchParams();
   const [period, setPeriod] = useState<BillingPeriod>('month');
+  const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | undefined>();
   const q = useQuery({ queryKey: ['billing'], queryFn: () => api<BillingOverviewDto>('/billing') });
   const checkout = useMutation({
-    mutationFn: (planKey: string) => api<CheckoutDto>('/billing/checkout', { method: 'POST', body: { planKey, period } }),
+    mutationFn: (planKey: string) => api<CheckoutDto>('/billing/checkout', { method: 'POST', body: { planKey, period, phone } }),
     onSuccess: (c) => { window.location.assign(c.paymentUrl); },
   });
   const verify = useMutation({
@@ -38,7 +42,7 @@ export function Subscribe() {
     },
   });
 
-  // Back from Moyasar: check the payment once, then clean the address bar.
+  // Back from EdfaPay: check the payment once, then clean the address bar.
   const handled = useRef(false);
   useEffect(() => {
     const id = params.get('invoice');
@@ -54,6 +58,15 @@ export function Subscribe() {
   const d = q.data;
   const hasYearly = d.plans.some((p) => p.priceYearly !== null);
   const wasSuspended = d.subscription.status === 'suspended' || d.subscription.status === 'cancelled';
+  const start = (planKey: string) => {
+    if (!PHONE_RE.test(phone.replace(/[\s-]/g, ''))) {
+      setPhoneError(t('pay.phoneInvalid'));
+      document.getElementById('pay-phone')?.focus();
+      return;
+    }
+    setPhoneError(undefined);
+    checkout.mutate(planKey);
+  };
 
   return (
     <div className="mt-5 space-y-4">
@@ -78,6 +91,14 @@ export function Subscribe() {
         {d.providerReady && !d.canPay && <Alert tone="info">{t('pay.ownerOnly')}</Alert>}
         {(checkout.error || verify.error) && <Alert tone="error">{err(checkout.error ?? verify.error)}</Alert>}
         {verify.isPending && <p role="status" className="text-sm text-fg-muted">{t('pay.checking')}</p>}
+        {d.canPay && (
+          <div className="max-w-xs">
+            <Field label={t('pay.phone')} hint={t('pay.phoneHint')} error={phoneError} htmlFor="pay-phone">
+              <Input id="pay-phone" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" placeholder="05XXXXXXXX" value={phone}
+                aria-invalid={!!phoneError} onChange={(e) => setPhone(e.target.value)} />
+            </Field>
+          </div>
+        )}
 
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {d.plans.map((p) => {
@@ -102,7 +123,7 @@ export function Subscribe() {
                 <div className="mt-auto pt-4">
                   {price !== null && p.priceMonthly !== null ? (
                     <Button className="w-full" variant={p.current ? 'primary' : 'secondary'} icon="lock" disabled={!d.canPay || checkout.isPending}
-                      loading={checkout.isPending && checkout.variables === p.key} onClick={() => checkout.mutate(p.key)}>
+                      loading={checkout.isPending && checkout.variables === p.key} onClick={() => start(p.key)}>
                       {checkout.isPending && checkout.variables === p.key ? t('pay.redirecting') : p.current ? t('pay.renew') : t('pay.choose')}
                     </Button>
                   ) : <p className="text-center text-xs text-fg-muted">{t('pay.contact')}</p>}

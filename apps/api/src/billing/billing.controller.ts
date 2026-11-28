@@ -1,8 +1,8 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { checkoutSchema } from '@rakan/shared';
 import { z } from 'zod';
 import type { RequestMeta, TenantAuthContext } from '../common/auth-context';
-import { AllowWhenSuspended, Auth, Meta, PlatformAdminOnly, Public, RequirePermission } from '../common/decorators';
+import { AllowWhenSuspended, Auth, Meta, PlatformAdminOnly, Public, RequirePermission, SignedWebhook } from '../common/decorators';
 import { UuidPipe } from '../common/uuid.pipe';
 import { ZodPipe } from '../common/zod.pipe';
 import { BillingService } from './billing.service';
@@ -40,22 +40,17 @@ export class BillingController {
   }
 }
 
-/** Notifications from Moyasar. Never trusted on their own: each one triggers a check with Moyasar's API. */
+/** Notifications from EdfaPay: signed (X-EdfaPay-Signature), and still re-checked with EdfaPay's API. */
 @Public()
-@Controller('public/billing/moyasar')
-export class MoyasarHooksController {
+@Controller('public/billing/edfapay')
+export class EdfaPayHooksController {
   constructor(private readonly billing: BillingService) {}
 
-  @HttpCode(200)
-  @Post('callback')
-  callback(@Body() body: unknown) {
-    return this.billing.callback(body);
-  }
-
+  @SignedWebhook()
   @HttpCode(200)
   @Post('webhook')
-  webhook(@Body() body: unknown) {
-    return this.billing.webhook(body);
+  webhook(@Body() body: unknown, @Headers('x-edfapay-signature') signature?: string) {
+    return this.billing.webhook(body, signature);
   }
 }
 

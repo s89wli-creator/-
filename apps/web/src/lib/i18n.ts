@@ -334,7 +334,6 @@ const AUDIT_ACTIONS: Record<string, { ar: string; en: string }> = {
   'billing.paid': { ar: 'تم دفع الاشتراك', en: 'Subscription paid' },
   'billing.check_failed': { ar: 'دفعة لم تطابق (المبلغ أو المرجع)', en: 'Payment check failed (amount or reference)' },
   'billing.refunded': { ar: 'استرداد مبلغ دفعة', en: 'Payment refunded' },
-  'billing.webhook_verification': { ar: 'رمز تحقق Webhook من ميسر', en: 'Moyasar webhook verification code' },
   'tenant.logo.set': { ar: 'تغيير شعار الشركة', en: 'Company logo changed' },
   'tenant.logo.remove': { ar: 'إزالة شعار الشركة', en: 'Company logo removed' },
   'attachment.upload': { ar: 'إرفاق ملف', en: 'File attached' },

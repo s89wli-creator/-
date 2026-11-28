@@ -8,7 +8,7 @@ import { useI18n } from '@/lib/providers';
 
 const TONE: Record<BillingInvoiceDto['status'], 'accent' | 'success' | 'danger' | 'muted'> = { pending: 'accent', paid: 'success', failed: 'danger', expired: 'muted', canceled: 'muted' };
 
-/** Platform console: every subscription payment, as confirmed with Moyasar. */
+/** Platform console: every subscription payment, as confirmed with EdfaPay. */
 export default function PlatformPaymentsPage() {
   const { t, locale } = useI18n();
   const q = useQuery({ queryKey: ['platform-payments'], queryFn: () => api<BillingInvoiceDto[]>('/platform/billing/invoices') });

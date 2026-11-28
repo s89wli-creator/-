@@ -1,7 +1,9 @@
 import { CanActivate, ExecutionContext, Inject, Injectable, NestMiddleware } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import type { NextFunction, Request, Response } from 'express';
 import { APP_CONFIG, type AppConfig } from '../config';
 import { CSRF_COOKIE, CSRF_HEADER } from './cookies';
+import { IS_PUBLIC, SIGNED_WEBHOOK } from './decorators';
 import { generateToken, safeEqual } from './crypto';
 import { AppError } from './errors';
 
@@ -29,9 +31,14 @@ export class CsrfCookieMiddleware implements NestMiddleware {
 /** Every state-changing request must echo the CSRF cookie in a header. */
 @Injectable()
 export class CsrfGuard implements CanActivate {
+  constructor(private readonly reflector: Reflector) {}
+
   canActivate(context: ExecutionContext): boolean {
     const req = context.switchToHttp().getRequest<Request>();
     if (SAFE_METHODS.has(req.method)) return true;
+    // Signed provider notifications carry no cookies; they must be public and check their own signature.
+    const targets = [context.getHandler(), context.getClass()];
+    if (this.reflector.getAllAndOverride<boolean>(SIGNED_WEBHOOK, targets) && this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, targets)) return true;
     const cookie = req.cookies?.[CSRF_COOKIE] as string | undefined;
     const header = req.get(CSRF_HEADER);
     if (!cookie || !header || !safeEqual(cookie, header)) {

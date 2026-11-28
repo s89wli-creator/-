@@ -18,6 +18,13 @@ export const AllowWhenSuspended = () => SetMetadata(ALLOW_SUSPENDED, true);
 /** Route does not require a session (a session is still attached if present). */
 export const Public = () => SetMetadata(IS_PUBLIC, true);
 
+/**
+ * Server-to-server notification from a provider (no browser, no cookies): skips the CSRF check.
+ * Only for @Public endpoints that verify their own signature over the raw body.
+ */
+export const SIGNED_WEBHOOK = 'rakan:signedWebhook';
+export const SignedWebhook = () => SetMetadata(SIGNED_WEBHOOK, true);
+
 /** Route requires an active tenant membership with this permission. */
 /** Platform console routes (cross-company aggregates). Requires a platform operator; see PermissionsGuard. */
 export const PlatformAdminOnly = () => SetMetadata(PLATFORM_ADMIN, true);

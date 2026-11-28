@@ -35,10 +35,13 @@ const envSchema = z.object({
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().default('mailto:support@rakan.local'),
   PUSH_PROVIDER: z.enum(['vapid', 'fake']).optional(),
-  /** Subscription payments (Moyasar). Secret key and webhook secret stay on the server. */
-  PAYMENTS_PROVIDER: z.enum(['moyasar', 'fake', 'none']).optional(),
-  MOYASAR_SECRET_KEY: z.string().optional(),
-  MOYASAR_WEBHOOK_SECRET: z.string().optional(),
+  /** Subscription payments (EdfaPay). API key and webhook secret stay on the server. Defaults to "edfapay" when EDFAPAY_API_KEY is set. */
+  PAYMENTS_PROVIDER: z.enum(['edfapay', 'fake', 'none']).optional(),
+  EDFAPAY_API_KEY: z.string().optional(),
+  /** Set in the EdfaPay dashboard (Webhook Secret); every notification is signed HMAC-SHA256 with it. Required to accept notifications. */
+  EDFAPAY_WEBHOOK_SECRET: z.string().optional(),
+  /** sandbox = demo-api.edfapay.com (no real money), live = app-api.edfapay.com. */
+  EDFAPAY_ENV: z.enum(['sandbox', 'live']).default('sandbox'),
   /** Scheduled agents: runs due jobs every minute. Defaults to on, except in tests. */
   SCHEDULER_ENABLED: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
   /** Voice (spokesperson voice clone, speech in/out). Defaults to "elevenlabs" when ELEVENLABS_API_KEY is set. */
@@ -83,7 +86,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (parsed.data.VOICE_PROVIDER === 'fake') throw new Error('VOICE_PROVIDER=fake is for tests only');
     if (parsed.data.PUSH_PROVIDER === 'fake') throw new Error('PUSH_PROVIDER=fake is for tests only');
     if (parsed.data.PAYMENTS_PROVIDER === 'fake') throw new Error('PAYMENTS_PROVIDER=fake is for tests only');
-    if (parsed.data.MOYASAR_SECRET_KEY?.startsWith('sk_test_')) console.warn('MOYASAR_SECRET_KEY is a TEST key: no real money will be collected');
+    if (parsed.data.EDFAPAY_API_KEY && parsed.data.EDFAPAY_ENV === 'sandbox') console.warn('EDFAPAY_ENV=sandbox: no real money will be collected');
+    if (parsed.data.EDFAPAY_API_KEY && !parsed.data.EDFAPAY_WEBHOOK_SECRET) console.warn('EDFAPAY_WEBHOOK_SECRET is missing: payment notifications will be refused');
   }
   return parsed.data;
 }

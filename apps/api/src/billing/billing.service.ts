@@ -2,7 +2,6 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { billingEvents, billingInvoices, memberships, plans, platformAudit, subscriptions, tenants, users, type Tx } from '@rakan/db';
 import { VAT_RATE, hasPermission, type BillingInvoiceDto, type BillingOverviewDto, type BillingPeriod, type CheckoutDto } from '@rakan/shared';
 import { and, desc, eq, gt, inArray, sql } from 'drizzle-orm';
-import { timingSafeEqual } from 'node:crypto';
 import type { RequestMeta, TenantAuthContext } from '../common/auth-context';
 import { DbService } from '../common/db.service';
 import { AppError, notFound } from '../common/errors';
@@ -10,7 +9,7 @@ import { APP_CONFIG, type AppConfig } from '../config';
 import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../coach/notifications.service';
 import { MailService } from '../identity/mail.service';
-import { PAYMENT_PROVIDER, type PaymentProvider, type ProviderInvoice } from './payment.provider';
+import { PAYMENT_PROVIDER, type PaymentProvider, type ProviderTransaction } from './payment.provider';
 
 type Row = typeof billingInvoices.$inferSelect;
 const DAY = 86400_000;
@@ -30,20 +29,14 @@ export function priceBreakdown(priceSar: number): { subtotal: number; vat: numbe
   return { subtotal, vat, total: subtotal + vat };
 }
 
-function safeEqual(a: string, b: string): boolean {
-  const x = Buffer.from(a);
-  const y = Buffer.from(b);
-  return x.length === y.length && timingSafeEqual(x, y);
-}
-
 /**
- * Subscription payments with Moyasar.
+ * Subscription payments with EdfaPay (hosted checkout).
  * - The amount always comes from the plan price on the server (never from the browser), plus 15% VAT.
- * - The customer pays on Moyasar's hosted page; card details never reach Rakan.
- * - A payment counts only after Rakan fetches the invoice from Moyasar with the secret key and checks the
- *   status, amount, currency and our reference. Redirects, callbacks and webhooks are only hints.
- * - Applying a payment is idempotent (row lock + status check): a callback and a webhook for the same payment
- *   extend the subscription once.
+ * - The customer pays on EdfaPay's hosted page; card details never reach Rakan.
+ * - EdfaPay tells us about a payment with a signed notification (HMAC-SHA256 over the raw body). Even then, a
+ *   payment counts only after Rakan asks EdfaPay for that transaction with the API key and checks the status,
+ *   amount, currency and our order reference. Redirects back to the app are only hints.
+ * - Applying a payment is idempotent (row lock + status check): repeated notifications extend the subscription once.
  */
 @Injectable()
 export class BillingService {
@@ -99,8 +92,8 @@ export class BillingService {
     return { ...this.dto(r), companyName: tenant.name };
   }
 
-  /** Starts a payment for a plan and period; returns Moyasar's hosted payment page. */
-  async checkout(auth: TenantAuthContext, input: { planKey: string; period: BillingPeriod }, meta: RequestMeta): Promise<CheckoutDto> {
+  /** Starts a payment for a plan and period; returns EdfaPay's hosted checkout page. */
+  async checkout(auth: TenantAuthContext, input: { planKey: string; period: BillingPeriod; phone: string }, meta: RequestMeta): Promise<CheckoutDto> {
     if (!this.provider.ready) throw new AppError(503, 'PAYMENTS_NOT_CONFIGURED', 'Online payment is not set up yet');
     const [plan] = await this.db.platform((tx) => tx.select().from(plans).where(and(eq(plans.key, input.planKey), eq(plans.isActive, true))));
     const price = input.period === 'month' ? plan?.priceSarMonthly : plan?.priceSarYearly;
@@ -137,14 +130,15 @@ export class BillingService {
       return r!;
     });
 
-    let pi: ProviderInvoice;
+    // EdfaPay requires the payer's name, email and phone. The phone is sent to EdfaPay only, not stored by Rakan.
+    const [payer] = await this.db.platform((tx) => tx.select({ name: users.fullName, email: users.email }).from(users).where(eq(users.id, auth.userId)));
+    let co: { url: string; sessionId: string | null };
     try {
       const back = `${this.config.WEB_ORIGIN}/settings/billing?invoice=${row.id}`;
-      pi = await this.provider.createInvoice({
-        amount: amounts.total, currency: 'SAR',
-        description: `اشتراك راكان — ${plan.nameAr} (${input.period === 'month' ? 'شهري' : 'سنوي'}) — ${tenant.name} — ${row.number}`,
-        successUrl: back, backUrl: `${back}&canceled=1`, callbackUrl: `${this.config.WEB_ORIGIN}/api/public/billing/moyasar/callback`,
-        expiresAt: new Date(Date.now() + INVOICE_TTL_DAYS * DAY), metadata: { rakan_invoice_id: row.id, tenant_id: auth.tenantId, number: row.number },
+      co = await this.provider.createCheckout({
+        orderId: row.number, amount: amounts.total, currency: 'SAR',
+        customer: { name: payer?.name || tenant.name, email: payer!.email, phone: input.phone },
+        successUrl: back, failureUrl: `${back}&canceled=1`, expiresAt: new Date(Date.now() + INVOICE_TTL_DAYS * DAY),
       });
     } catch (e) {
       this.log.error({ err: e, invoice: row.id }, 'payment provider invoice failed');
@@ -152,57 +146,62 @@ export class BillingService {
       throw new AppError(502, 'PAYMENT_PROVIDER_ERROR', 'Could not start the payment, please try again');
     }
     await this.db.platform((tx) =>
-      tx.update(billingInvoices).set({ providerInvoiceId: pi.id, paymentUrl: pi.url, providerStatus: pi.status, updatedAt: new Date() }).where(eq(billingInvoices.id, row.id)),
+      tx.update(billingInvoices).set({ providerInvoiceId: co.sessionId, paymentUrl: co.url, providerStatus: 'initiated', updatedAt: new Date() }).where(eq(billingInvoices.id, row.id)),
     );
-    if (!pi.url) throw new AppError(502, 'PAYMENT_PROVIDER_ERROR', 'The payment page was not created');
-    return { invoiceId: row.id, paymentUrl: pi.url };
+    return { invoiceId: row.id, paymentUrl: co.url };
   }
 
-  /** "I paid" / back from the payment page: re-checks with Moyasar. */
+  /** "I paid" / back from the payment page: re-checks with EdfaPay (once EdfaPay has told us the transaction). */
   async verify(auth: TenantAuthContext, id: string): Promise<BillingInvoiceDto> {
     const [r] = await this.db.tenant(auth, (tx) => tx.select().from(billingInvoices).where(and(eq(billingInvoices.tenantId, auth.tenantId), eq(billingInvoices.id, id))));
     if (!r) throw notFound('Invoice');
     return this.dto(await this.sync(r.id));
   }
 
-  /** The only place a payment is accepted: fetch from the provider and check everything. */
+  /** The only place a payment is accepted: ask the provider about the transaction and check everything. */
   async sync(id: string): Promise<Row> {
     const [r] = await this.db.platform((tx) => tx.select().from(billingInvoices).where(eq(billingInvoices.id, id)));
     if (!r) throw notFound('Invoice');
-    if (r.status !== 'pending' || !r.providerInvoiceId) return r;
-    let pi: ProviderInvoice;
-    try {
-      pi = await this.provider.getInvoice(r.providerInvoiceId);
-    } catch (e) {
-      this.log.warn({ err: e, invoice: id }, 'could not fetch invoice from provider');
+    if (r.status !== 'pending') return r;
+    if (!r.providerPaymentId) {
+      // No payment reported yet. Past the link's lifetime the invoice is closed (a new one can be started).
+      if (r.createdAt.getTime() < Date.now() - INVOICE_TTL_DAYS * DAY) return this.mark(r, 'expired', r.providerStatus, null);
       return r;
     }
-    if (pi.metadata?.rakan_invoice_id && pi.metadata.rakan_invoice_id !== r.id) return this.mark(r, 'failed', pi, 'reference_mismatch');
-    if (pi.status === 'paid') {
-      if (pi.amount !== r.totalHalalas || pi.currency.toUpperCase() !== r.currency) return this.mark(r, 'failed', pi, 'amount_mismatch');
-      return this.applyPaid(r.id, pi);
+    let t: ProviderTransaction;
+    try {
+      t = await this.provider.getTransaction(r.providerPaymentId);
+    } catch (e) {
+      this.log.warn({ err: e, invoice: id }, 'could not fetch transaction from provider');
+      return r;
     }
-    if (pi.status === 'expired') return this.mark(r, 'expired', pi, null);
-    if (pi.status === 'canceled' || pi.status === 'voided') return this.mark(r, 'canceled', pi, null);
-    if (pi.status !== r.providerStatus) {
-      await this.db.platform((tx) => tx.update(billingInvoices).set({ providerStatus: pi.status, updatedAt: new Date() }).where(eq(billingInvoices.id, r.id)));
+    if (t.orderId !== r.number) return this.mark(r, 'failed', t.rawStatus, 'reference_mismatch', t.id);
+    if (t.outcome === 'paid') {
+      if (t.type && t.type !== 'PURCHASE') return this.mark(r, 'failed', t.rawStatus, 'unexpected_type', t.id);
+      if (t.amount !== r.totalHalalas || t.currency !== r.currency) return this.mark(r, 'failed', t.rawStatus, 'amount_mismatch', t.id);
+      return this.applyPaid(r.id, t);
     }
-    return { ...r, providerStatus: pi.status };
+    // A declined card keeps the invoice open: the customer can try again on the same page until it expires.
+    const failureReason = t.outcome === 'declined' ? 'declined' : r.failureReason;
+    if (t.rawStatus !== r.providerStatus || failureReason !== r.failureReason) {
+      await this.db.platform((tx) => tx.update(billingInvoices).set({ providerStatus: t.rawStatus, failureReason, updatedAt: new Date() }).where(eq(billingInvoices.id, r.id)));
+    }
+    return { ...r, providerStatus: t.rawStatus, failureReason };
   }
 
-  private async mark(r: Row, status: 'failed' | 'expired' | 'canceled', pi: ProviderInvoice, reason: string | null): Promise<Row> {
+  private async mark(r: Row, status: 'failed' | 'expired' | 'canceled', providerStatus: string | null, reason: string | null, transactionId?: string): Promise<Row> {
     const [u] = await this.db.platform((tx) =>
-      tx.update(billingInvoices).set({ status, providerStatus: pi.status, failureReason: reason, updatedAt: new Date() })
+      tx.update(billingInvoices).set({ status, providerStatus, failureReason: reason, updatedAt: new Date() })
         .where(and(eq(billingInvoices.id, r.id), eq(billingInvoices.status, 'pending'))).returning(),
     );
     if (reason) {
-      this.log.error({ invoice: r.id, reason, providerStatus: pi.status, amount: pi.amount }, 'payment check failed');
-      await this.db.platform((tx) => tx.insert(platformAudit).values({ action: 'billing.check_failed', tenantId: r.tenantId, after: { number: r.number, reason, providerInvoiceId: pi.id } }));
+      this.log.error({ invoice: r.id, reason, providerStatus, transactionId }, 'payment check failed');
+      await this.db.platform((tx) => tx.insert(platformAudit).values({ action: 'billing.check_failed', tenantId: r.tenantId, after: { number: r.number, reason, transactionId: transactionId ?? null } }));
     }
     return u ?? r;
   }
 
-  private async applyPaid(id: string, pi: ProviderInvoice): Promise<Row> {
+  private async applyPaid(id: string, ptx: ProviderTransaction): Promise<Row> {
     const result = await this.db.platform(async (tx: Tx) => {
       const [r] = await tx.select().from(billingInvoices).where(eq(billingInvoices.id, id)).for('update');
       if (!r || r.status !== 'pending') return { row: r!, applied: false, suspended: false };
@@ -212,7 +211,7 @@ export class BillingService {
       const end = addPeriod(start, r.period);
       const [paid] = await tx
         .update(billingInvoices)
-        .set({ status: 'paid', paidAt: now, providerPaymentId: pi.paymentId, providerStatus: pi.status, periodStart: start, periodEnd: end, updatedAt: now })
+        .set({ status: 'paid', paidAt: now, providerPaymentId: ptx.id, providerStatus: ptx.rawStatus, failureReason: null, periodStart: start, periodEnd: end, updatedAt: now })
         .where(eq(billingInvoices.id, id))
         .returning();
       if (sub) await tx.update(subscriptions).set({ planId: r.planId, trialEndsAt: null, currentPeriodEnd: end, updatedAt: now }).where(eq(subscriptions.tenantId, r.tenantId));
@@ -221,7 +220,7 @@ export class BillingService {
       if (t?.status === 'trial') await tx.update(tenants).set({ status: 'active', updatedAt: now }).where(eq(tenants.id, r.tenantId));
       await tx.insert(platformAudit).values({
         action: 'billing.paid', tenantId: r.tenantId,
-        after: { number: r.number, plan: r.planKey, period: r.period, total: r.totalHalalas / 100, paidUntil: end.toISOString(), providerPaymentId: pi.paymentId },
+        after: { number: r.number, plan: r.planKey, period: r.period, total: r.totalHalalas / 100, paidUntil: end.toISOString(), transactionId: ptx.id },
       });
       return { row: paid!, applied: true, suspended: t?.status === 'suspended' || t?.status === 'cancelled' };
     });
@@ -256,42 +255,50 @@ export class BillingService {
 
   // ---------------------------------------------------------------- provider notifications
 
-  /** Invoice callback (POST from Moyasar with the invoice object). Unsigned, so only used as a hint to re-check. */
-  async callback(body: unknown): Promise<{ ok: true }> {
-    const pid = (body as { id?: unknown } | null)?.id;
-    if (typeof pid === 'string' && pid.length <= 100) {
-      const [r] = await this.db.platform((tx) => tx.select({ id: billingInvoices.id }).from(billingInvoices).where(eq(billingInvoices.providerInvoiceId, pid)));
-      if (r) await this.sync(r.id);
+  /**
+   * EdfaPay notification (POST, text/plain JSON). Signature checked over the raw bytes, each (transaction, type,
+   * status) handled once, and the payment itself re-checked with EdfaPay's API before anything changes.
+   */
+  async webhook(raw: unknown, signature: string | undefined): Promise<{ ok: true }> {
+    if (!this.config.EDFAPAY_WEBHOOK_SECRET) throw new AppError(503, 'PAYMENTS_NOT_CONFIGURED', 'Webhook secret not configured');
+    const body = Buffer.isBuffer(raw) ? raw : Buffer.from(typeof raw === 'string' ? raw : '');
+    if (!this.provider.verifySignature(body, signature)) throw new AppError(401, 'INVALID_SIGNATURE', 'Invalid webhook signature');
+    let e: { transactionId?: unknown; orderId?: unknown; status?: unknown; type?: unknown } | null;
+    try {
+      e = JSON.parse(body.toString('utf8')) as typeof e;
+    } catch {
+      e = null;
     }
-    return { ok: true };
-  }
+    const str = (v: unknown, max = 100) => (typeof v === 'string' && v.length > 0 && v.length <= max ? v : null);
+    const txId = str(e?.transactionId);
+    const orderId = str(e?.orderId);
+    const status = str(e?.status, 40) ?? '';
+    const type = str(e?.type, 40) ?? '';
+    if (!txId || !orderId) throw new AppError(400, 'VALIDATION_ERROR', 'Malformed notification');
 
-  /** Account webhook: shared secret checked, each event handled once, payment re-checked with the provider. */
-  async webhook(body: unknown): Promise<{ ok: true }> {
-    const secret = this.config.MOYASAR_WEBHOOK_SECRET;
-    if (!secret) throw new AppError(503, 'PAYMENTS_NOT_CONFIGURED', 'Webhook secret not configured');
-    const e = body as { id?: string; type?: string; secret_token?: string; live?: boolean; data?: { id?: string; invoice_id?: string; verification_code?: string } } | null;
-    if (!e || typeof e.secret_token !== 'string' || !safeEqual(e.secret_token, secret)) throw new AppError(401, 'INVALID_SIGNATURE', 'Invalid webhook secret');
-    if (typeof e.id !== 'string' || typeof e.type !== 'string') throw new AppError(400, 'VALIDATION_ERROR', 'Malformed event');
-    const ref = e.data?.invoice_id ?? null;
+    const eventId = `${txId}:${orderId}:${type}:${status}`.slice(0, 240);
     const [fresh] = await this.db.platform((tx) =>
-      tx.insert(billingEvents).values({ provider: 'moyasar', eventId: e.id!, type: e.type!, ref, live: e.live ?? null })
+      tx.insert(billingEvents).values({ provider: 'edfapay', eventId, type: `${type}:${status}`, ref: orderId, live: null })
         .onConflictDoNothing({ target: [billingEvents.provider, billingEvents.eventId] }).returning({ id: billingEvents.id }),
     );
     if (!fresh) return { ok: true }; // already handled
-    let outcome = 'ignored';
-    if (e.type === 'webhook_verification') {
-      await this.db.platform((tx) => tx.insert(platformAudit).values({ action: 'billing.webhook_verification', after: { code: e.data?.verification_code ?? null } }));
-      outcome = 'verification_logged';
-    } else if (ref) {
-      const [r] = await this.db.platform((tx) => tx.select({ id: billingInvoices.id }).from(billingInvoices).where(eq(billingInvoices.providerInvoiceId, ref)));
-      if (r) outcome = (await this.sync(r.id)).status;
-      if (e.type === 'payment_refunded' && r) {
-        await this.db.platform((tx) => tx.insert(platformAudit).values({ action: 'billing.refunded', after: { providerInvoiceId: ref, paymentId: e.data?.id ?? null } }));
-        outcome = 'refund_logged';
+    const [r] = await this.db.platform((tx) => tx.select().from(billingInvoices).where(eq(billingInvoices.number, orderId)));
+    let outcome = 'unknown_order';
+    if (r && /^purchase$/i.test(type)) {
+      if (r.status === 'pending') {
+        await this.db.platform((tx) =>
+          tx.update(billingInvoices).set({ providerPaymentId: txId, providerStatus: status, updatedAt: new Date() })
+            .where(and(eq(billingInvoices.id, r.id), eq(billingInvoices.status, 'pending'))),
+        );
       }
+      outcome = (await this.sync(r.id)).status;
+    } else if (r && /^refund$/i.test(type)) {
+      await this.db.platform((tx) => tx.insert(platformAudit).values({ action: 'billing.refunded', tenantId: r.tenantId, after: { number: r.number, transactionId: txId, status } }));
+      outcome = 'refund_logged';
+    } else if (r) {
+      outcome = 'ignored';
     }
-    await this.db.platform((tx) => tx.update(billingEvents).set({ outcome }).where(and(eq(billingEvents.provider, 'moyasar'), eq(billingEvents.eventId, e.id!))));
+    await this.db.platform((tx) => tx.update(billingEvents).set({ outcome }).where(and(eq(billingEvents.provider, 'edfapay'), eq(billingEvents.eventId, eventId))));
     return { ok: true };
   }
 

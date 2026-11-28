@@ -17,6 +17,11 @@ export async function createApp(config: AppConfig): Promise<NestExpressApplicati
   app.disable('x-powered-by');
   app.use(helmet());
   app.use(cookieParser());
+  // EdfaPay notifications arrive as text/plain and are signed over the exact bytes: keep them raw (before JSON).
+  app.useBodyParser('raw', {
+    limit: '64kb',
+    type: (req: { url?: string }) => (req.url ?? '').split('?')[0] === '/api/public/billing/edfapay/webhook',
+  });
   app.useBodyParser('json', { limit: '100kb' });
   // Spokesperson voice sample (platform console only), up to 12 MB. Registered first so it wins for this path.
   app.useBodyParser('raw', {

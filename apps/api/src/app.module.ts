@@ -69,14 +69,14 @@ import { SchedulerService } from './coach/scheduler.service';
 import { AttachmentsService } from './files/attachments.service';
 import { AttachmentsController, LogoController, PushController } from './files/files.controller';
 import { BrandingService } from './files/branding.service';
-import { BillingController, MoyasarHooksController, PlatformBillingController } from './billing/billing.controller';
+import { BillingController, EdfaPayHooksController, PlatformBillingController } from './billing/billing.controller';
 import { BillingService } from './billing/billing.service';
-import { FakePaymentProvider, MoyasarProvider, PAYMENT_PROVIDER, type PaymentProvider } from './billing/payment.provider';
+import { EdfaPayProvider, FakePaymentProvider, PAYMENT_PROVIDER, type PaymentProvider } from './billing/payment.provider';
 
 function paymentProvider(config: AppConfig): PaymentProvider {
-  const kind = config.PAYMENTS_PROVIDER ?? (config.MOYASAR_SECRET_KEY ? 'moyasar' : 'none');
-  if (kind === 'fake') return new FakePaymentProvider();
-  return new MoyasarProvider(kind === 'moyasar' ? config.MOYASAR_SECRET_KEY : undefined);
+  const kind = config.PAYMENTS_PROVIDER ?? (config.EDFAPAY_API_KEY ? 'edfapay' : 'none');
+  if (kind === 'fake') return new FakePaymentProvider(config.EDFAPAY_WEBHOOK_SECRET);
+  return new EdfaPayProvider(kind === 'edfapay' ? config.EDFAPAY_API_KEY : undefined, config.EDFAPAY_WEBHOOK_SECRET, config.EDFAPAY_ENV);
 }
 import { FakePushSender, PUSH_SENDER, PushService, VapidSender, type PushSender } from './files/push.service';
 
@@ -142,7 +142,7 @@ export class AppModule implements NestModule {
         HealthController, AuthController, TenantController, TeamController, InvitationsController, AuditController,
         CrmSettingsController, AccountsController, ContactsNotesController, OpportunitiesController, TasksController,
         VisitsController, ImportsController, ReportsController, AttentionController, AiController, BrainController, ApprovalsController, ProspectingController, AssistantController,
-        FieldController, RecordingsController, PlatformController, TenantPlanController, VoiceController, PlatformVoiceController, ProposalsController, PublicProposalsController, CoachController, AutomationController, NotificationsController, AttachmentsController, PushController, LogoController, BillingController, MoyasarHooksController, PlatformBillingController,
+        FieldController, RecordingsController, PlatformController, TenantPlanController, VoiceController, PlatformVoiceController, ProposalsController, PublicProposalsController, CoachController, AutomationController, NotificationsController, AttachmentsController, PushController, LogoController, BillingController, EdfaPayHooksController, PlatformBillingController,
       ],
       providers: [
         DbService, PasswordService, SessionService, MailService, AuditService, SecurityService,

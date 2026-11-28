@@ -13,7 +13,7 @@ export async function createFilesFixtures(crm: CrmFixtures): Promise<FilesFixtur
   await b.uploadWith('/tenant/logo', {}, png, 'b.png').expect(200);
   const endpoint = 'https://push.example.com/b-device';
   await b.post('/push/subscriptions', { endpoint, keys: { p256dh: 'B'.repeat(87), auth: 'b'.repeat(22) } }).expect(200);
-  const bill = (await b.post('/billing/checkout', { planKey: 'team', period: 'month' }).expect(201)).body;
+  const bill = (await b.post('/billing/checkout', { planKey: 'team', period: 'month', phone: '0551234567' }).expect(201)).body;
   return { a, b, B: { attachmentId: att.id, accountId: crm.B.accountId, endpoint, billingInvoiceId: bill.invoiceId } };
 }
 
@@ -51,7 +51,7 @@ export function filesProbes(f: () => FilesFixtures): Record<string, () => Promis
       expect(JSON.stringify((await f().a.get('/billing').expect(200)).body)).not.toContain(f().B.billingInvoiceId);
     },
     'POST /api/billing/checkout': async () => {
-      const mine = (await f().a.post('/billing/checkout', { planKey: 'team', period: 'month' }).expect(201)).body;
+      const mine = (await f().a.post('/billing/checkout', { planKey: 'team', period: 'month', phone: '0551234567' }).expect(201)).body;
       expect(mine.invoiceId).not.toBe(f().B.billingInvoiceId);
       const [row] = await ownerQuery<{ n: number }>('SELECT count(*)::int AS n FROM billing_invoices WHERE tenant_id = (SELECT tenant_id FROM billing_invoices WHERE id = $1)', [f().B.billingInvoiceId]);
       expect(row!.n).toBe(1);
