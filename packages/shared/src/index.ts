@@ -9,3 +9,4 @@ export * from './platform';
 export * from './proposals';
 export * from './coach';
 export * from './files';
+export * from './billing';

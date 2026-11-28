@@ -2,7 +2,7 @@ import { expect } from 'vitest';
 import type { CrmFixtures } from './crm-probes';
 import { ownerQuery, type TestClient } from './helpers';
 
-export interface FilesFixtures { a: TestClient; b: TestClient; B: { attachmentId: string; accountId: string; endpoint: string } }
+export interface FilesFixtures { a: TestClient; b: TestClient; B: { attachmentId: string; accountId: string; endpoint: string; billingInvoiceId: string } }
 
 const PDF = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.from('ملف سري للشركة ب'), Buffer.alloc(500, 32)]);
 
@@ -13,7 +13,8 @@ export async function createFilesFixtures(crm: CrmFixtures): Promise<FilesFixtur
   await b.uploadWith('/tenant/logo', {}, png, 'b.png').expect(200);
   const endpoint = 'https://push.example.com/b-device';
   await b.post('/push/subscriptions', { endpoint, keys: { p256dh: 'B'.repeat(87), auth: 'b'.repeat(22) } }).expect(200);
-  return { a, b, B: { attachmentId: att.id, accountId: crm.B.accountId, endpoint } };
+  const bill = (await b.post('/billing/checkout', { planKey: 'team', period: 'month' }).expect(201)).body;
+  return { a, b, B: { attachmentId: att.id, accountId: crm.B.accountId, endpoint, billingInvoiceId: bill.invoiceId } };
 }
 
 export function filesProbes(f: () => FilesFixtures): Record<string, () => Promise<void>> {
@@ -45,6 +46,21 @@ export function filesProbes(f: () => FilesFixtures): Record<string, () => Promis
     'DELETE /api/tenant/logo': async () => {
       await f().a.delete('/tenant/logo').expect(204);
       await f().b.get('/tenant/logo').expect(200);
+    },
+    'GET /api/billing': async () => {
+      expect(JSON.stringify((await f().a.get('/billing').expect(200)).body)).not.toContain(f().B.billingInvoiceId);
+    },
+    'POST /api/billing/checkout': async () => {
+      const mine = (await f().a.post('/billing/checkout', { planKey: 'team', period: 'month' }).expect(201)).body;
+      expect(mine.invoiceId).not.toBe(f().B.billingInvoiceId);
+      const [row] = await ownerQuery<{ n: number }>('SELECT count(*)::int AS n FROM billing_invoices WHERE tenant_id = (SELECT tenant_id FROM billing_invoices WHERE id = $1)', [f().B.billingInvoiceId]);
+      expect(row!.n).toBe(1);
+    },
+    'GET /api/billing/invoices/:id': async () => {
+      await f().a.get(`/billing/invoices/${f().B.billingInvoiceId}`).expect(404);
+    },
+    'POST /api/billing/invoices/:id/verify': async () => {
+      await f().a.post(`/billing/invoices/${f().B.billingInvoiceId}/verify`).expect(404);
     },
     'GET /api/push': async () => {
       expect((await f().a.get('/push').expect(200)).body.devices).toBe(0);

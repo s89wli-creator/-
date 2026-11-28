@@ -12,3 +12,4 @@ export * from './schema-agents';
 export * from './schema-proposals';
 export * from './schema-coach';
 export * from './schema-files';
+export * from './schema-billing';

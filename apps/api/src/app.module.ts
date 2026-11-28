@@ -69,6 +69,15 @@ import { SchedulerService } from './coach/scheduler.service';
 import { AttachmentsService } from './files/attachments.service';
 import { AttachmentsController, LogoController, PushController } from './files/files.controller';
 import { BrandingService } from './files/branding.service';
+import { BillingController, MoyasarHooksController, PlatformBillingController } from './billing/billing.controller';
+import { BillingService } from './billing/billing.service';
+import { FakePaymentProvider, MoyasarProvider, PAYMENT_PROVIDER, type PaymentProvider } from './billing/payment.provider';
+
+function paymentProvider(config: AppConfig): PaymentProvider {
+  const kind = config.PAYMENTS_PROVIDER ?? (config.MOYASAR_SECRET_KEY ? 'moyasar' : 'none');
+  if (kind === 'fake') return new FakePaymentProvider();
+  return new MoyasarProvider(kind === 'moyasar' ? config.MOYASAR_SECRET_KEY : undefined);
+}
 import { FakePushSender, PUSH_SENDER, PushService, VapidSender, type PushSender } from './files/push.service';
 
 function pushSender(config: AppConfig): PushSender {
@@ -133,7 +142,7 @@ export class AppModule implements NestModule {
         HealthController, AuthController, TenantController, TeamController, InvitationsController, AuditController,
         CrmSettingsController, AccountsController, ContactsNotesController, OpportunitiesController, TasksController,
         VisitsController, ImportsController, ReportsController, AttentionController, AiController, BrainController, ApprovalsController, ProspectingController, AssistantController,
-        FieldController, RecordingsController, PlatformController, TenantPlanController, VoiceController, PlatformVoiceController, ProposalsController, PublicProposalsController, CoachController, AutomationController, NotificationsController, AttachmentsController, PushController, LogoController,
+        FieldController, RecordingsController, PlatformController, TenantPlanController, VoiceController, PlatformVoiceController, ProposalsController, PublicProposalsController, CoachController, AutomationController, NotificationsController, AttachmentsController, PushController, LogoController, BillingController, MoyasarHooksController, PlatformBillingController,
       ],
       providers: [
         DbService, PasswordService, SessionService, MailService, AuditService, SecurityService,
@@ -144,7 +153,7 @@ export class AppModule implements NestModule {
         AiRuntimeService, ToolGatewayService, AiSettingsService, BrainService, AgentsService, MessagingService,
         StorageService, RecordingsService, PlanService, PlatformService, AttentionService, ProspectingService, AssistantService,
         { provide: VOICE_PROVIDER, useValue: voiceProvider(config) }, VoiceService, ProposalsService, CoachService, NotificationsService, SchedulerService,
-        AttachmentsService, PushService, BrandingService, { provide: PUSH_SENDER, useValue: pushSender(config) },
+        AttachmentsService, PushService, BrandingService, BillingService, { provide: PAYMENT_PROVIDER, useValue: paymentProvider(config) }, { provide: PUSH_SENDER, useValue: pushSender(config) },
         { provide: APP_FILTER, useClass: AllExceptionsFilter },
         { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor },
         // Order matters: rate limit -> CSRF -> session -> permission.

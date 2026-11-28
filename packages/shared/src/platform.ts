@@ -7,6 +7,7 @@ export const planSchema = z.object({
   nameAr: z.string().trim().min(1).max(60),
   nameEn: z.string().trim().min(1).max(60),
   priceSarMonthly: z.number().min(0).max(1_000_000).nullable(),
+  priceSarYearly: z.number().min(0).max(10_000_000).nullable().optional(),
   limits: planLimitsSchema,
   isActive: z.boolean().default(true),
   sort: z.number().int().min(0).max(1000).default(0),
@@ -29,7 +30,7 @@ export const tenantListQuerySchema = z.object({
 
 export interface PlanLimitsDto { users: number | null; aiMonthlyUsd: number | null; storageMb: number | null; recordingMinutes: number | null }
 export interface PlanDto {
-  id: string; key: string; nameAr: string; nameEn: string; priceSarMonthly: number | null; limits: PlanLimitsDto;
+  id: string; key: string; nameAr: string; nameEn: string; priceSarMonthly: number | null; priceSarYearly: number | null; limits: PlanLimitsDto;
   isActive: boolean; sort: number; tenants: number;
 }
 export interface UsageDto {

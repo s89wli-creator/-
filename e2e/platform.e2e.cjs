@@ -111,6 +111,12 @@ async function register(browser, company, email) {
   await acme.goto(BASE + '/settings/billing');
   await acme.getByRole('heading', { name: 'الباقة والاستهلاك' }).waitFor();
   await acme.getByText('949 ر.س/شهر').waitFor();
+  // Subscription payment section: plans with VAT, honest "not enabled" without a Moyasar key.
+  await acme.getByRole('heading', { name: 'الاشتراك والدفع' }).waitFor();
+  await acme.getByText('الدفع الإلكتروني غير مفعّل على المنصة بعد').waitFor();
+  await acme.getByText(/1,091\.35 ر\.س شامل الضريبة/).waitFor(); // 949 + 15% VAT
+  assert(await acme.getByRole('button', { name: 'جدّد' }).isDisabled(), 'payment must be disabled without a provider');
+  await acme.getByText('لا توجد مدفوعات بعد.').waitFor();
   await acme.screenshot({ path: `${OUT}/platform-03-billing.png`, fullPage: true });
 
   assert(errors.length === 0, `page errors:\n${errors.join('\n')}`);

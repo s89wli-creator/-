@@ -14,6 +14,7 @@ export const plans = pgTable('plans', {
   nameAr: text('name_ar').notNull(),
   nameEn: text('name_en').notNull(),
   priceSarMonthly: numeric('price_sar_monthly', { precision: 10, scale: 2, mode: 'number' }),
+  priceSarYearly: numeric('price_sar_yearly', { precision: 10, scale: 2, mode: 'number' }),
   limits: jsonb('limits').$type<PlanLimits>().notNull(),
   isActive: boolean('is_active').notNull().default(true),
   sort: integer('sort').notNull().default(0),

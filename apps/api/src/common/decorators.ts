@@ -11,6 +11,9 @@ export const PLATFORM_ADMIN = 'rakan:platformAdmin';
 
 /** Applies the strict `auth` throttler (AUTH_RATE_LIMIT_PER_MINUTE per IP) to credential endpoints. */
 export const AuthRateLimited = () => SetMetadata(AUTH_RATE_LIMITED, true);
+/** The route stays open to a suspended company (paying its subscription). */
+export const ALLOW_SUSPENDED = 'rakan:allowSuspended';
+export const AllowWhenSuspended = () => SetMetadata(ALLOW_SUSPENDED, true);
 
 /** Route does not require a session (a session is still attached if present). */
 export const Public = () => SetMetadata(IS_PUBLIC, true);

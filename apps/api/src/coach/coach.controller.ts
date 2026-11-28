@@ -2,7 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, Patch, Post, Query } from '@nes
 import { JOBS, coachQuerySchema, coachReportListQuerySchema, coachReportRequestSchema, jobUpdateSchema } from '@rakan/shared';
 import { z } from 'zod';
 import type { RequestMeta, TenantAuthContext } from '../common/auth-context';
-import { Auth, Meta, RequirePermission } from '../common/decorators';
+import { AllowWhenSuspended, Auth, Meta, RequirePermission } from '../common/decorators';
 import { UuidPipe } from '../common/uuid.pipe';
 import { ZodPipe } from '../common/zod.pipe';
 import { CoachService } from './coach.service';
@@ -84,7 +84,8 @@ export class AutomationController {
   }
 }
 
-/** The signed-in person's own notifications. */
+/** The signed-in person's own notifications (still readable while the company is suspended: payment receipts). */
+@AllowWhenSuspended()
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notes: NotificationsService) {}

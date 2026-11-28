@@ -4,7 +4,7 @@ import type { Permission } from '@rakan/shared';
 import { SessionService } from '../identity/session.service';
 import { SESSION_COOKIE } from './cookies';
 import { APP_CONFIG, type AppConfig } from '../config';
-import { IS_PUBLIC, PERMISSION, PLATFORM_ADMIN, type RakanRequest } from './decorators';
+import { ALLOW_SUSPENDED, IS_PUBLIC, PERMISSION, PLATFORM_ADMIN, type RakanRequest } from './decorators';
 import { AppError } from './errors';
 
 /**
@@ -60,7 +60,8 @@ export class PermissionsGuard implements CanActivate {
     const auth = context.switchToHttp().getRequest<RakanRequest>().auth;
     if (!auth) throw new AppError(401, 'UNAUTHENTICATED', 'Sign in required');
     if (!auth.tenantId) throw new AppError(403, 'NO_ACTIVE_TENANT', 'No active company selected');
-    if (auth.tenantStatus === 'suspended' || auth.tenantStatus === 'cancelled') {
+    const allowSuspended = this.reflector.getAllAndOverride<boolean>(ALLOW_SUSPENDED, [context.getHandler(), context.getClass()]);
+    if (!allowSuspended && (auth.tenantStatus === 'suspended' || auth.tenantStatus === 'cancelled')) {
       throw new AppError(403, 'TENANT_SUSPENDED', 'This company account is suspended');
     }
     if (!auth.permissions.includes(permission)) {

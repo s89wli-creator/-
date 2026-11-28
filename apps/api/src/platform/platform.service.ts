@@ -193,15 +193,15 @@ export class PlatformService {
       const rows = await tx.select().from(plans).orderBy(asc(plans.sort));
       const counts = await tx.select({ planId: subscriptions.planId, n: sql<number>`count(*)::int` }).from(subscriptions).groupBy(subscriptions.planId);
       return rows.map((p) => ({
-        id: p.id, key: p.key, nameAr: p.nameAr, nameEn: p.nameEn, priceSarMonthly: p.priceSarMonthly, limits: p.limits, isActive: p.isActive, sort: p.sort,
+        id: p.id, key: p.key, nameAr: p.nameAr, nameEn: p.nameEn, priceSarMonthly: p.priceSarMonthly, priceSarYearly: p.priceSarYearly, limits: p.limits, isActive: p.isActive, sort: p.sort,
         tenants: counts.find((c) => c.planId === p.id)?.n ?? 0,
       }));
     });
   }
 
-  async createPlan(auth: AuthContext, input: Omit<PlanRow, 'id' | 'createdAt' | 'updatedAt'>, meta: RequestMeta): Promise<PlanDto[]> {
+  async createPlan(auth: AuthContext, input: Omit<PlanRow, 'id' | 'createdAt' | 'updatedAt' | 'priceSarYearly'> & { priceSarYearly?: number | null }, meta: RequestMeta): Promise<PlanDto[]> {
     try {
-      await this.db.platform((tx) => tx.insert(plans).values(input));
+      await this.db.platform((tx) => tx.insert(plans).values({ ...input, priceSarYearly: input.priceSarYearly ?? null }));
     } catch (e) {
       if (pgErrorCode(e) === '23505' && pgConstraint(e) === 'plans_key_key') throw conflict('NAME_TAKEN', 'A plan with this key exists');
       throw e;

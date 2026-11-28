@@ -35,7 +35,7 @@ export default function PlatformPlansPage() {
     const body = {
       ...(editing === 'new' ? { key: String(fd.get('key') ?? '') } : {}),
       nameAr: String(fd.get('nameAr') ?? ''), nameEn: String(fd.get('nameEn') ?? ''),
-      priceSarMonthly: num(fd.get('price')), sort: Number(fd.get('sort') || 0), isActive: fd.get('isActive') === 'on',
+      priceSarMonthly: num(fd.get('price')), priceSarYearly: num(fd.get('priceYearly')), sort: Number(fd.get('sort') || 0), isActive: fd.get('isActive') === 'on',
       limits: Object.fromEntries(LIMITS.map((k) => [k, num(fd.get(k))])),
     };
     save.mutate({ id: editing !== 'new' && editing ? editing.id : undefined, body });
@@ -86,6 +86,7 @@ export default function PlatformPlansPage() {
               <Field label={t('platform.plans.nameAr')} htmlFor="nameAr"><Input id="nameAr" name="nameAr" required defaultValue={p?.nameAr ?? ''} /></Field>
               <Field label={t('platform.plans.nameEn')} htmlFor="nameEn"><Input id="nameEn" name="nameEn" dir="ltr" required defaultValue={p?.nameEn ?? ''} /></Field>
               <Field label={t('platform.plans.price')} htmlFor="price" optional><Input id="price" name="price" type="number" min={0} step="any" dir="ltr" defaultValue={p?.priceSarMonthly ?? ''} /></Field>
+              <Field label={t('platform.plans.priceYearly')} htmlFor="priceYearly" optional><Input id="priceYearly" name="priceYearly" type="number" min={0} step="any" dir="ltr" defaultValue={p?.priceSarYearly ?? ''} /></Field>
               <Field label={t('platform.plans.sort')} htmlFor="sort"><Input id="sort" name="sort" type="number" min={0} dir="ltr" defaultValue={p?.sort ?? 10} /></Field>
               {LIMITS.map((k) => (
                 <Field key={k} label={t(`platform.limit.${k}` as MessageKey)} htmlFor={`l-${k}`} optional>

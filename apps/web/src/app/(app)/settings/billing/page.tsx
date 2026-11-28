@@ -6,6 +6,8 @@ import { Alert, Badge, Card, CardHeading, ErrorState, LoadingState, Meter, NoPer
 import { api } from '@/lib/api';
 import type { MessageKey } from '@/lib/i18n';
 import { useCan, useI18n } from '@/lib/providers';
+import { Suspense } from 'react';
+import { Subscribe } from '@/components/billing/Subscribe';
 
 /** The company's plan and how much of it is used (hard limits apply at 100%). */
 export default function BillingPage() {
@@ -54,6 +56,7 @@ export default function BillingPage() {
           <p className="text-xs text-fg-muted">{t('billing.limitsNote')}</p>
         </Card>
       </div>
+      <Suspense fallback={null}><Subscribe /></Suspense>
     </>
   );
 }

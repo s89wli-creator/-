@@ -35,6 +35,10 @@ const envSchema = z.object({
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().default('mailto:support@rakan.local'),
   PUSH_PROVIDER: z.enum(['vapid', 'fake']).optional(),
+  /** Subscription payments (Moyasar). Secret key and webhook secret stay on the server. */
+  PAYMENTS_PROVIDER: z.enum(['moyasar', 'fake', 'none']).optional(),
+  MOYASAR_SECRET_KEY: z.string().optional(),
+  MOYASAR_WEBHOOK_SECRET: z.string().optional(),
   /** Scheduled agents: runs due jobs every minute. Defaults to on, except in tests. */
   SCHEDULER_ENABLED: z.enum(['true', 'false']).transform((v) => v === 'true').optional(),
   /** Voice (spokesperson voice clone, speech in/out). Defaults to "elevenlabs" when ELEVENLABS_API_KEY is set. */
@@ -78,6 +82,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (parsed.data.AI_PROVIDER === 'fake') throw new Error('AI_PROVIDER=fake is for tests only');
     if (parsed.data.VOICE_PROVIDER === 'fake') throw new Error('VOICE_PROVIDER=fake is for tests only');
     if (parsed.data.PUSH_PROVIDER === 'fake') throw new Error('PUSH_PROVIDER=fake is for tests only');
+    if (parsed.data.PAYMENTS_PROVIDER === 'fake') throw new Error('PAYMENTS_PROVIDER=fake is for tests only');
+    if (parsed.data.MOYASAR_SECRET_KEY?.startsWith('sk_test_')) console.warn('MOYASAR_SECRET_KEY is a TEST key: no real money will be collected');
   }
   return parsed.data;
 }

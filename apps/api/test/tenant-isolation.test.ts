@@ -55,6 +55,7 @@ const PLATFORM_PROBES: Record<string, () => Promise<void>> = Object.fromEntries(
     ['GET', '/platform/plans'], ['POST', '/platform/plans'], ['PATCH', '/platform/plans/:id'], ['GET', '/platform/audit'],
     ['GET', '/platform/voice'], ['POST', '/platform/voice'], ['DELETE', '/platform/voice'],
     ['PUT', '/platform/voice/library'], ['PUT', '/platform/voice/style'], ['POST', '/platform/voice/preview'],
+    ['GET', '/platform/billing/invoices'],
   ].map(([method, path]) => [
     `${method} /api${path}`,
     async () => {
